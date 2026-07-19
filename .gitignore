@@ -37,6 +37,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# legacy Streamlit app + KB files kept locally for porting reference only
+/Reference/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

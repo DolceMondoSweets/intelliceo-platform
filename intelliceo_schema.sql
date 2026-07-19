@@ -120,6 +120,17 @@ create policy "Users see own profile"
     on profiles for select
     using (id = auth.uid());
 
+-- Onboarding: a newly-signed-up user has no business yet, so they must be
+-- able to create one and link themselves to it before tenant isolation
+-- (which depends on that link existing) can apply to anything else.
+create policy "Authenticated users can create a business"
+    on businesses for insert
+    with check (auth.uid() is not null);
+
+create policy "Users can create their own profile"
+    on profiles for insert
+    with check (id = auth.uid());
+
 -- Repeat the same business_id-matching pattern for every tenant-scoped table
 create policy "Tenant isolation: finance_data"
     on finance_data for all
@@ -144,3 +155,53 @@ create policy "Tenant isolation: knowledge_base_entries"
 create policy "Tenant isolation: square_credentials"
     on square_credentials for all
     using (business_id = (select business_id from profiles where id = auth.uid()));
+
+-- ═══════════════════════════════════════════════════════════════════════
+-- TEMPORARY WORKAROUND — pending Supabase support's root-cause response.
+-- auth.uid() has been directly proven (via RPC and a raw SQL reproduction
+-- bypassing the app/PostgREST/JWT entirely) to resolve correctly; the plain
+-- `.from('businesses').insert()` path still fails the trivial
+-- `auth.uid() IS NOT NULL` INSERT policy for reasons outside our control.
+-- This function bypasses RLS for exactly the two bootstrap inserts
+-- onboarding needs, via SECURITY DEFINER, while every other table keeps
+-- enforcing RLS normally. Remove/simplify once the underlying anomaly is
+-- resolved — completeOnboarding should go back to plain inserts at that
+-- point, matching every other tenant-scoped write in this app.
+-- ═══════════════════════════════════════════════════════════════════════
+
+-- search_path is pinned explicitly — required hardening for SECURITY
+-- DEFINER functions to prevent search_path-based function/table shadowing.
+create or replace function public.create_business_and_profile(
+    business_name text,
+    business_industry text default 'food_and_beverage'
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_business_id uuid;
+begin
+  if v_user_id is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  if exists (select 1 from profiles where id = v_user_id and business_id is not null) then
+    raise exception 'This account is already linked to a business.';
+  end if;
+
+  insert into businesses (name, industry)
+  values (business_name, business_industry)
+  returning id into v_business_id;
+
+  insert into profiles (id, business_id, role)
+  values (v_user_id, v_business_id, 'owner')
+  on conflict (id) do update set business_id = excluded.business_id;
+
+  return v_business_id;
+end;
+$$;
+
+grant execute on function public.create_business_and_profile(text, text) to authenticated;

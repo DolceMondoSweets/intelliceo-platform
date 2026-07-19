@@ -226,7 +226,14 @@ export interface Database {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      // TEMPORARY — see intelliceo_schema.sql for why this SECURITY DEFINER
+      // function exists (pending Supabase support's RLS anomaly response).
+      create_business_and_profile: {
+        Args: { business_name: string; business_industry?: string };
+        Returns: string;
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };
