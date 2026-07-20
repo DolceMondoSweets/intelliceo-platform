@@ -134,7 +134,7 @@ export async function askChat(newMessage: string): Promise<AskChatResult> {
     (currentSummary ? `SUMMARY OF EARLIER CONVERSATION:\n${currentSummary}\n\n` : "") +
     `BUSINESS CONTEXT:\n${kbContext}\n\n` +
     `FINANCE SNAPSHOT:\n${financeSnapshot}\n\n` +
-    `RECENT MORNING BRIEF HISTORY:\n${trendHistory}`;
+    `RECENT CEO BRIEF HISTORY:\n${trendHistory}`;
 
   const conversationMessages: ChatMessage[] = recentMessages.map((m) => ({
     role: m.role as "user" | "assistant",

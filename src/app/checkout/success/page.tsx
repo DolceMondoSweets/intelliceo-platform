@@ -15,14 +15,15 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export default async function CheckoutSuccessPage({
   searchParams,
 }: {
-  searchParams: Promise<{ session_id?: string }>;
+  searchParams: Promise<{ session_id?: string; source?: string }>;
 }) {
   const { user, businessId } = await getSessionState();
   if (!user) redirect("/login");
   if (!businessId) redirect("/onboarding");
 
-  const { session_id: sessionId } = await searchParams;
-  if (!sessionId) redirect("/dashboard");
+  const { session_id: sessionId, source } = await searchParams;
+  const destination = source === "onboarding" ? "/dashboard?welcome=1" : "/dashboard";
+  if (!sessionId) redirect(destination);
 
   const stripe = getStripeClient();
   const session = await stripe.checkout.sessions.retrieve(sessionId, {
@@ -41,5 +42,5 @@ export default async function CheckoutSuccessPage({
     }
   }
 
-  redirect("/dashboard");
+  redirect(destination);
 }

@@ -31,7 +31,7 @@ export async function createCheckoutSession(tier: SubscriptionTier): Promise<Cre
       metadata: { business_id: businessId },
     },
     allow_promotion_codes: true,
-    success_url: `${baseUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+    success_url: `${baseUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}&source=onboarding`,
     cancel_url: `${baseUrl}/onboarding/plan`,
   });
 

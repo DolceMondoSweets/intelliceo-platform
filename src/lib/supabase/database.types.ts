@@ -24,6 +24,7 @@ export interface Database {
           stripe_subscription_id: string | null;
           subscription_status: string | null;
           trial_ends_at: string | null;
+          logo_url: string | null;
           created_at: string | null;
         };
         Insert: {
@@ -36,6 +37,7 @@ export interface Database {
           stripe_subscription_id?: string | null;
           subscription_status?: string | null;
           trial_ends_at?: string | null;
+          logo_url?: string | null;
           created_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["businesses"]["Insert"]>;
@@ -322,6 +324,14 @@ export interface Database {
       };
       set_stripe_customer_id: {
         Args: { p_customer_id: string };
+        Returns: undefined;
+      };
+      set_business_logo_url: {
+        Args: { p_logo_url: string };
+        Returns: undefined;
+      };
+      set_business_name: {
+        Args: { p_name: string };
         Returns: undefined;
       };
     };

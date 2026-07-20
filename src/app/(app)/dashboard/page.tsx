@@ -1,8 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { getSessionState } from "@/lib/supabase/session";
-import { Button } from "@/components/ui";
+import { getBusinessBrand } from "@/lib/business-brand";
 import { calculateCogsMetrics, type CogsMetric } from "@/lib/business-context";
-import { signOut } from "./actions";
+import { BusinessInfoDisclosure } from "./business-info-disclosure";
 
 const COGS_STALE_AFTER_DAYS = 30;
 
@@ -22,13 +22,19 @@ function primeCostColor(pct: number | null): string {
   return "#e74c3c";
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ welcome?: string }>;
+}) {
   const { businessId: id } = await getSessionState();
   const businessId = id as string; // guaranteed by (app)/layout.tsx
   const supabase = await createClient();
+  const { welcome } = await searchParams;
 
-  const [{ data: business }, { data: kbEntries }, { data: finance }] = await Promise.all([
-    supabase.from("businesses").select("name, industry").eq("id", businessId).single(),
+  const [brand, { data: business }, { data: kbEntries }, { data: finance }] = await Promise.all([
+    getBusinessBrand(supabase, businessId),
+    supabase.from("businesses").select("industry").eq("id", businessId).single(),
     supabase.from("knowledge_base_entries").select("category, content").eq("business_id", businessId),
     supabase.from("finance_data").select("*").eq("business_id", businessId).maybeSingle(),
   ]);
@@ -46,15 +52,24 @@ export default async function DashboardPage() {
   const cogsStale = isCogsStale(finance?.cogs_updated_at ?? null, revenueMtd);
 
   return (
-    <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 bg-zinc-50 px-6 py-10 dark:bg-black">
-      <div>
-        <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
-          Onboarding complete
-        </p>
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
-          {business?.name ?? "Your business"}
-        </h1>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">{business?.industry}</p>
+    <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 bg-zinc-50 px-6 py-10 dark:bg-black">
+      {welcome && (
+        <div className="rounded-lg border-l-4 border-emerald-500 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300">
+          🎉 You&apos;re all set — welcome to IntelliCEO!
+        </div>
+      )}
+
+      <div className="flex items-center gap-3">
+        {brand.logoUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={brand.logoUrl} alt="" className="h-12 w-12 rounded-xl object-cover" />
+        )}
+        <div>
+          <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
+            {brand.name || "Your business"}
+          </h1>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">{business?.industry}</p>
+        </div>
       </div>
 
       {cogsStale && (
@@ -66,13 +81,11 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      <Section title="Business overview" content={kbByCategory.business_overview} />
-      <Section title="Products" content={kbByCategory.products} />
-      <Section title="Priorities" content={kbByCategory.priorities} />
-
-      <div className="rounded-2xl border border-zinc-200 p-4 dark:border-zinc-800">
-        <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Finance snapshot</h2>
-        <dl className="mt-2 grid grid-cols-2 gap-3">
+      <div className="rounded-2xl border border-zinc-200 p-6 shadow-sm dark:border-zinc-800">
+        <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
+          Finance Snapshot
+        </h2>
+        <dl className="mt-4 grid grid-cols-2 gap-5 sm:grid-cols-3">
           <Stat label="Cash" value={finance?.cash} prefix="$" />
           <Stat label="Monthly burn" value={finance?.burn} prefix="$" />
           <Stat label="Runway" value={finance?.runway} suffix=" mo" />
@@ -80,16 +93,17 @@ export default async function DashboardPage() {
           <CostStat label="Food cost %" metric={foodCost} />
           <CostStat label="Prime cost %" metric={primeCost} />
         </dl>
-        <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
+        <p className="mt-4 text-xs text-zinc-500 dark:text-zinc-400">
           Healthy food &amp; beverage prime cost is typically 60–65% of revenue.
         </p>
       </div>
 
-      <form action={signOut}>
-        <Button type="submit" variant="secondary" className="w-full">
-          Log out
-        </Button>
-      </form>
+      <Section title="Priorities" content={kbByCategory.priorities} />
+
+      <BusinessInfoDisclosure
+        overview={kbByCategory.business_overview ?? null}
+        products={kbByCategory.products ?? null}
+      />
     </div>
   );
 }
@@ -118,8 +132,8 @@ function Stat({
 }) {
   return (
     <div>
-      <dt className="text-xs text-zinc-500 dark:text-zinc-400">{label}</dt>
-      <dd className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+      <dt className="text-sm text-zinc-500 dark:text-zinc-400">{label}</dt>
+      <dd className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
         {prefix}
         {value ?? 0}
         {suffix}
@@ -132,9 +146,9 @@ function CostStat({ label, metric }: { label: string; metric: CogsMetric }) {
   const isOk = metric.status === "ok" && metric.pct !== null;
   return (
     <div>
-      <dt className="text-xs text-zinc-500 dark:text-zinc-400">{label}</dt>
+      <dt className="text-sm text-zinc-500 dark:text-zinc-400">{label}</dt>
       <dd
-        className="text-lg font-semibold"
+        className="text-2xl font-semibold"
         style={{ color: isOk ? primeCostColor(metric.pct) : undefined }}
       >
         {isOk ? (

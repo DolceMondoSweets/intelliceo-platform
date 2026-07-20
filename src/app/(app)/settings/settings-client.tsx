@@ -1,11 +1,18 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { Button, inputClass } from "@/components/ui";
-import { updateBusinessName, updateKnowledgeBase, updateFinanceSnapshot } from "./actions";
+import {
+  updateBusinessName,
+  updateKnowledgeBase,
+  updateFinanceSnapshot,
+  uploadBusinessLogo,
+  signOut,
+} from "./actions";
 
 export function SettingsClient({
   businessName: initialBusinessName,
+  logoUrl,
   overview: initialOverview,
   products: initialProducts,
   priorities: initialPriorities,
@@ -16,6 +23,7 @@ export function SettingsClient({
   monthlyLaborCost: initialMonthlyLaborCost,
 }: {
   businessName: string;
+  logoUrl: string | null;
   overview: string;
   products: string;
   priorities: string;
@@ -37,6 +45,30 @@ export function SettingsClient({
       const result = await updateBusinessName(businessName);
       if (result.error) setNameError(result.error);
       else setNameSaved(true);
+    });
+  }
+
+  const [logoPreview, setLogoPreview] = useState<string | null>(logoUrl);
+  const [logoError, setLogoError] = useState<string | null>(null);
+  const [logoSaved, setLogoSaved] = useState(false);
+  const [isSavingLogo, startLogoTransition] = useTransition();
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
+  function handleLogoChange() {
+    const file = logoInputRef.current?.files?.[0];
+    if (!file) return;
+
+    setLogoError(null);
+    setLogoSaved(false);
+    const objectUrl = URL.createObjectURL(file);
+    setLogoPreview(objectUrl);
+
+    startLogoTransition(async () => {
+      const formData = new FormData();
+      formData.set("logo", file);
+      const result = await uploadBusinessLogo(formData);
+      if (result.error) setLogoError(result.error);
+      else setLogoSaved(true);
     });
   }
 
@@ -96,6 +128,36 @@ export function SettingsClient({
         <Button type="button" onClick={handleSaveName} disabled={isSavingName} className="self-start">
           {isSavingName ? "Saving…" : nameSaved ? "Saved ✓" : "Save Business Name"}
         </Button>
+
+        <div className="mt-2 flex items-center gap-3 border-t border-zinc-100 pt-3 dark:border-zinc-900">
+          {logoPreview ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={logoPreview}
+              alt="Business logo"
+              className="h-12 w-12 rounded-lg object-cover"
+            />
+          ) : (
+            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-zinc-100 text-xs text-zinc-400 dark:bg-zinc-900 dark:text-zinc-600">
+              No logo
+            </div>
+          )}
+          <div className="flex flex-col gap-1.5">
+            <input
+              ref={logoInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              onChange={handleLogoChange}
+              className="text-sm text-zinc-600 file:mr-3 file:rounded-full file:border-0 file:bg-zinc-900 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white dark:text-zinc-400 dark:file:bg-zinc-50 dark:file:text-zinc-900"
+            />
+            <p className="text-xs text-zinc-400 dark:text-zinc-600">
+              PNG, JPEG, or WebP, up to 2MB.
+              {isSavingLogo && " Uploading…"}
+              {!isSavingLogo && logoSaved && " Saved ✓"}
+            </p>
+            {logoError && <p className="text-sm text-red-600 dark:text-red-400">{logoError}</p>}
+          </div>
+        </div>
       </section>
 
       <section className="flex flex-col gap-3 rounded-2xl border border-zinc-200 p-4 dark:border-zinc-800">
@@ -256,6 +318,12 @@ export function SettingsClient({
           Trigger Test Error
         </Button>
       </section>
+
+      <form action={signOut}>
+        <Button type="submit" variant="secondary" className="w-full">
+          Log out
+        </Button>
+      </form>
     </div>
   );
 }

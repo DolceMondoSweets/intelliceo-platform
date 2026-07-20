@@ -75,7 +75,7 @@ export async function generateMorningBrief(): Promise<GenerateBriefResult> {
     `BUSINESS CONTEXT:\n${kbContext}\n\n` +
     `FINANCE SNAPSHOT:\n${financeSnapshot}\n\n` +
     `RECENT TREND (previous briefs, oldest to newest):\n${trendHistory}\n\n` +
-    "Give me this morning's brief as JSON. Base 'momentum' on the actual trend above where " +
+    "Give me the current CEO brief as JSON. Base 'momentum' on the actual trend above where " +
     "history exists (e.g. score/runway moving up or down across entries) rather than a guess " +
     "from today's snapshot alone. If there's no meaningful history yet, say so is fine — don't " +
     "fabricate a trend.";

@@ -20,7 +20,7 @@ export default async function MorningBriefPage() {
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 bg-zinc-50 px-6 py-10 dark:bg-black">
       <div>
         <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
-          Good Morning, Founder
+          CEO Brief
         </h1>
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
           {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}

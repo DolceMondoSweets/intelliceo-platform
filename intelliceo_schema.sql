@@ -22,6 +22,10 @@ create table businesses (
     stripe_subscription_id text,
     subscription_status text,
     trial_ends_at timestamptz,
+    -- Storage object path in the business-logos bucket (NOT a public URL —
+    -- the bucket is private; a signed URL is generated server-side wherever
+    -- the logo is displayed, see src/lib/business-brand.ts).
+    logo_url text,
     created_at timestamptz default now()
 );
 
@@ -225,6 +229,34 @@ create policy "Tenant isolation: chat_summary"
     using (business_id = (select business_id from profiles where id = auth.uid()));
 
 -- ═══════════════════════════════════════════════════════════════════════
+-- BUSINESS LOGOS — Supabase Storage, not a Postgres table. Same
+-- tenant-isolation guarantee as every table above, just expressed via
+-- storage.objects' path instead of a business_id column: every object is
+-- stored at `{business_id}/logo`, and (storage.foldername(name))[1] pulls
+-- that business_id back out to compare against the caller's own.
+-- ═══════════════════════════════════════════════════════════════════════
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('business-logos', 'business-logos', false, 2097152, array['image/png','image/jpeg','image/webp'])
+on conflict (id) do nothing;
+
+create policy "Business logos: tenant select"
+    on storage.objects for select
+    using (bucket_id = 'business-logos' and (storage.foldername(name))[1] = (select business_id::text from profiles where id = auth.uid()));
+
+create policy "Business logos: tenant insert"
+    on storage.objects for insert
+    with check (bucket_id = 'business-logos' and (storage.foldername(name))[1] = (select business_id::text from profiles where id = auth.uid()));
+
+create policy "Business logos: tenant update"
+    on storage.objects for update
+    using (bucket_id = 'business-logos' and (storage.foldername(name))[1] = (select business_id::text from profiles where id = auth.uid()));
+
+create policy "Business logos: tenant delete"
+    on storage.objects for delete
+    using (bucket_id = 'business-logos' and (storage.foldername(name))[1] = (select business_id::text from profiles where id = auth.uid()));
+
+-- ═══════════════════════════════════════════════════════════════════════
 -- ROOT CAUSE CONFIRMED by Supabase support (closed, not a workaround).
 -- The Supabase client's default `.insert()` requests `return=representation`
 -- (asking Postgres to hand back the newly-created row), which requires the
@@ -293,6 +325,39 @@ end;
 $$;
 
 grant execute on function public.set_stripe_customer_id(text) to authenticated;
+
+-- Same pattern for the two other tenant-self-service fields on businesses:
+-- logo_url (new) and name (existing "Save Business Name" button in Settings
+-- was silently no-op-ing under this same missing-UPDATE-policy gap until
+-- now — fixed here rather than left broken next to the new logo upload).
+
+create or replace function public.set_business_logo_url(p_logo_url text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update businesses set logo_url = p_logo_url
+  where id = (select business_id from profiles where id = auth.uid());
+end;
+$$;
+
+grant execute on function public.set_business_logo_url(text) to authenticated;
+
+create or replace function public.set_business_name(p_name text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update businesses set name = p_name
+  where id = (select business_id from profiles where id = auth.uid());
+end;
+$$;
+
+grant execute on function public.set_business_name(text) to authenticated;
 
 -- ═══════════════════════════════════════════════════════════════════════
 -- PLATFORM ADMIN — internal-only cross-tenant visibility, gated by

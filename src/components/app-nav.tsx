@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 
 const LINKS = [
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/morning-brief", label: "Morning Brief" },
+  { href: "/morning-brief", label: "CEO Brief" },
   { href: "/vital-signs", label: "Vital Signs" },
   { href: "/decisions", label: "Decisions Log" },
   { href: "/content-studio", label: "Content Studio" },
@@ -14,7 +14,48 @@ const LINKS = [
   { href: "/settings", label: "Settings" },
 ];
 
-export function AppNav() {
+function BrandBlock({
+  businessName,
+  logoUrl,
+  size,
+}: {
+  businessName: string;
+  logoUrl: string | null;
+  size: "sm" | "lg";
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      {logoUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={logoUrl}
+          alt=""
+          className={size === "lg" ? "h-8 w-8 rounded-lg object-cover" : "h-6 w-6 rounded object-cover"}
+        />
+      )}
+      <div className="flex flex-col leading-tight">
+        <span
+          className={
+            size === "lg"
+              ? "text-lg font-semibold text-zinc-900 dark:text-zinc-50"
+              : "text-sm font-semibold text-zinc-900 dark:text-zinc-50"
+          }
+        >
+          {businessName || "IntelliCEO"}
+        </span>
+        <span className="text-[10px] text-zinc-400 dark:text-zinc-600">Powered by IntelliCEO</span>
+      </div>
+    </div>
+  );
+}
+
+export function AppNav({
+  businessName = "",
+  logoUrl = null,
+}: {
+  businessName?: string;
+  logoUrl?: string | null;
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
 
@@ -22,7 +63,7 @@ export function AppNav() {
     <>
       {/* Mobile top bar */}
       <div className="flex items-center justify-between border-b border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-black md:hidden">
-        <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">IntelliCEO</span>
+        <BrandBlock businessName={businessName} logoUrl={logoUrl} size="sm" />
         <button
           type="button"
           onClick={() => setIsOpen(true)}
@@ -53,7 +94,7 @@ export function AppNav() {
         }`}
       >
         <div className="mb-6 flex items-center justify-between">
-          <span className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">IntelliCEO</span>
+          <BrandBlock businessName={businessName} logoUrl={logoUrl} size="lg" />
           <button
             type="button"
             onClick={() => setIsOpen(false)}

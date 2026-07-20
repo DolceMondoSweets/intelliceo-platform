@@ -17,7 +17,7 @@ const PLANS: {
     price: "$59/mo",
     features: [
       "Dashboard",
-      "Morning Brief",
+      "CEO Brief",
       "Vital Signs",
       "Decisions Log",
       "Chat",

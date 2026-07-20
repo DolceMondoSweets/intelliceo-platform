@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getSessionState } from "@/lib/supabase/session";
+import { getBusinessBrand } from "@/lib/business-brand";
 import { SettingsClient } from "./settings-client";
 
 export default async function SettingsPage() {
@@ -7,8 +8,8 @@ export default async function SettingsPage() {
   const businessId = id as string; // guaranteed by (app)/layout.tsx
   const supabase = await createClient();
 
-  const [{ data: business }, { data: kbEntries }, { data: finance }] = await Promise.all([
-    supabase.from("businesses").select("name").eq("id", businessId).single(),
+  const [brand, { data: kbEntries }, { data: finance }] = await Promise.all([
+    getBusinessBrand(supabase, businessId),
     supabase.from("knowledge_base_entries").select("category, content").eq("business_id", businessId),
     supabase
       .from("finance_data")
@@ -31,7 +32,8 @@ export default async function SettingsPage() {
       </div>
 
       <SettingsClient
-        businessName={business?.name ?? ""}
+        businessName={brand.name}
+        logoUrl={brand.logoUrl}
         overview={kbByCategory.business_overview ?? ""}
         products={kbByCategory.products ?? ""}
         priorities={kbByCategory.priorities ?? ""}

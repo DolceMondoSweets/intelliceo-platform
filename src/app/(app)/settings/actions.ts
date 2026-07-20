@@ -1,5 +1,6 @@
 "use server";
 
+import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionState } from "@/lib/supabase/session";
@@ -13,19 +14,53 @@ export async function updateBusinessName(name: string): Promise<SettingsResult> 
   const trimmed = name.trim();
   if (!trimmed) return { error: "Business name is required." };
 
-  const { businessId } = await getSessionState();
   const supabase = await createClient();
 
-  const { error } = await supabase
-    .from("businesses")
-    .update({ name: trimmed })
-    .eq("id", businessId as string);
+  // businesses has no tenant UPDATE policy (writes go through narrow
+  // SECURITY DEFINER RPCs instead, same pattern as billing fields) — a
+  // plain .update() here would silently affect 0 rows.
+  const { error } = await supabase.rpc("set_business_name", { p_name: trimmed });
 
   if (error) return { error: error.message };
 
   revalidatePath("/settings");
   revalidatePath("/dashboard");
   return { success: true };
+}
+
+const MAX_LOGO_BYTES = 2 * 1024 * 1024;
+const ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"];
+
+export async function uploadBusinessLogo(formData: FormData): Promise<SettingsResult> {
+  const file = formData.get("logo");
+  if (!(file instanceof File) || file.size === 0) return { error: "Choose an image file first." };
+  if (!ALLOWED_LOGO_TYPES.includes(file.type)) {
+    return { error: "Logo must be a PNG, JPEG, or WebP image." };
+  }
+  if (file.size > MAX_LOGO_BYTES) return { error: "Logo must be smaller than 2MB." };
+
+  const { businessId } = await getSessionState();
+  const id = businessId as string;
+  const supabase = await createClient();
+
+  const path = `${id}/logo`;
+  const { error: uploadError } = await supabase.storage
+    .from("business-logos")
+    .upload(path, file, { upsert: true, contentType: file.type });
+  if (uploadError) return { error: uploadError.message };
+
+  const { error: rpcError } = await supabase.rpc("set_business_logo_url", { p_logo_url: path });
+  if (rpcError) return { error: rpcError.message };
+
+  revalidatePath("/settings");
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
+export async function signOut() {
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  redirect("/login");
 }
 
 export type KnowledgeBaseInput = {
