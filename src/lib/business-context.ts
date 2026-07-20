@@ -27,9 +27,21 @@ export async function getKbContext(
     .join("\n\n");
 }
 
+// "not_tracked": the underlying cost hasn't been entered yet.
+// "no_revenue": the cost IS entered, but revenue_mtd is 0/null so the ratio
+// is undefined — distinct from not_tracked because the data exists, revenue
+// just doesn't yet (e.g. a seasonal business that's currently closed).
+// "ok": both inputs present and revenue is positive — pct is a real number.
+export type CogsMetricStatus = "not_tracked" | "no_revenue" | "ok";
+
+export interface CogsMetric {
+  status: CogsMetricStatus;
+  pct: number | null;
+}
+
 export interface CogsMetrics {
-  foodCostPct: number | null;
-  primeCostPct: number | null;
+  foodCost: CogsMetric;
+  primeCost: CogsMetric;
 }
 
 // PHASE A of COGS/prime cost tracking. `monthlyCogs` is currently always a
@@ -43,17 +55,29 @@ export function calculateCogsMetrics(
   monthlyLaborCost: number | null,
   revenueMtd: number | null
 ): CogsMetrics {
-  if (!revenueMtd || revenueMtd <= 0) {
-    return { foodCostPct: null, primeCostPct: null };
-  }
+  const hasRevenue = revenueMtd !== null && revenueMtd > 0;
 
-  const foodCostPct = monthlyCogs !== null ? (monthlyCogs / revenueMtd) * 100 : null;
-  const primeCostPct =
-    monthlyCogs !== null && monthlyLaborCost !== null
-      ? ((monthlyCogs + monthlyLaborCost) / revenueMtd) * 100
-      : null;
+  const foodCost: CogsMetric =
+    monthlyCogs === null
+      ? { status: "not_tracked", pct: null }
+      : !hasRevenue
+        ? { status: "no_revenue", pct: null }
+        : { status: "ok", pct: (monthlyCogs / revenueMtd) * 100 };
 
-  return { foodCostPct, primeCostPct };
+  const primeCost: CogsMetric =
+    monthlyCogs === null || monthlyLaborCost === null
+      ? { status: "not_tracked", pct: null }
+      : !hasRevenue
+        ? { status: "no_revenue", pct: null }
+        : { status: "ok", pct: ((monthlyCogs + monthlyLaborCost) / revenueMtd) * 100 };
+
+  return { foodCost, primeCost };
+}
+
+function formatCogsMetric(metric: CogsMetric): string {
+  if (metric.status === "ok" && metric.pct !== null) return `${metric.pct.toFixed(1)}%`;
+  if (metric.status === "no_revenue") return "Can't calculate — no revenue recorded this month";
+  return "Not yet tracked";
 }
 
 export async function getFinanceSnapshot(
@@ -72,7 +96,7 @@ export async function getFinanceSnapshot(
   const revenueMtd = data?.revenue_mtd ?? 0;
   const monthlyCogs = data?.monthly_cogs ?? null;
   const monthlyLaborCost = data?.monthly_labor_cost ?? null;
-  const { foodCostPct, primeCostPct } = calculateCogsMetrics(monthlyCogs, monthlyLaborCost, revenueMtd);
+  const { foodCost, primeCost } = calculateCogsMetrics(monthlyCogs, monthlyLaborCost, revenueMtd);
 
   return (
     `Current Cash Balance: $${cash.toLocaleString()}\n` +
@@ -81,8 +105,8 @@ export async function getFinanceSnapshot(
     `Month-to-Date Revenue: $${revenueMtd.toLocaleString()}\n` +
     `Monthly COGS (ingredients/supplies): ${monthlyCogs !== null ? `$${monthlyCogs.toLocaleString()}` : "Not yet tracked"}\n` +
     `Monthly Labor Cost: ${monthlyLaborCost !== null ? `$${monthlyLaborCost.toLocaleString()}` : "Not yet tracked"}\n` +
-    `Food Cost % (COGS / Revenue): ${foodCostPct !== null ? `${foodCostPct.toFixed(1)}%` : "Not yet tracked"}\n` +
-    `Prime Cost % ((COGS + Labor) / Revenue): ${primeCostPct !== null ? `${primeCostPct.toFixed(1)}%` : "Not yet tracked"} — healthy range for food & beverage is typically 60-65%\n` +
+    `Food Cost % (COGS / Revenue): ${formatCogsMetric(foodCost)}\n` +
+    `Prime Cost % ((COGS + Labor) / Revenue): ${formatCogsMetric(primeCost)} — healthy range for food & beverage is typically 60-65%\n` +
     `Today's Date: ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`
   );
 }

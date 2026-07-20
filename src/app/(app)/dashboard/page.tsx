@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getSessionState } from "@/lib/supabase/session";
 import { Button } from "@/components/ui";
-import { calculateCogsMetrics } from "@/lib/business-context";
+import { calculateCogsMetrics, type CogsMetric } from "@/lib/business-context";
 import { signOut } from "./actions";
 
 const COGS_STALE_AFTER_DAYS = 30;
@@ -38,7 +38,7 @@ export default async function DashboardPage() {
   );
 
   const revenueMtd = finance?.revenue_mtd ?? 0;
-  const { foodCostPct, primeCostPct } = calculateCogsMetrics(
+  const { foodCost, primeCost } = calculateCogsMetrics(
     finance?.monthly_cogs ?? null,
     finance?.monthly_labor_cost ?? null,
     revenueMtd
@@ -77,8 +77,8 @@ export default async function DashboardPage() {
           <Stat label="Monthly burn" value={finance?.burn} prefix="$" />
           <Stat label="Runway" value={finance?.runway} suffix=" mo" />
           <Stat label="Revenue MTD" value={finance?.revenue_mtd} prefix="$" />
-          <CostStat label="Food cost %" pct={foodCostPct} />
-          <CostStat label="Prime cost %" pct={primeCostPct} />
+          <CostStat label="Food cost %" metric={foodCost} />
+          <CostStat label="Prime cost %" metric={primeCost} />
         </dl>
         <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
           Healthy food &amp; beverage prime cost is typically 60–65% of revenue.
@@ -128,16 +128,22 @@ function Stat({
   );
 }
 
-function CostStat({ label, pct }: { label: string; pct: number | null }) {
+function CostStat({ label, metric }: { label: string; metric: CogsMetric }) {
+  const isOk = metric.status === "ok" && metric.pct !== null;
   return (
     <div>
       <dt className="text-xs text-zinc-500 dark:text-zinc-400">{label}</dt>
-      <dd className="text-lg font-semibold" style={{ color: primeCostColor(pct) }}>
-        {pct !== null ? (
-          `${pct.toFixed(1)}%`
+      <dd
+        className="text-lg font-semibold"
+        style={{ color: isOk ? primeCostColor(metric.pct) : undefined }}
+      >
+        {isOk ? (
+          `${metric.pct!.toFixed(1)}%`
         ) : (
           <span className="text-sm font-normal text-zinc-400 dark:text-zinc-600">
-            Not yet tracked
+            {metric.status === "no_revenue"
+              ? "Can't calculate — no revenue this month"
+              : "Not yet tracked"}
           </span>
         )}
       </dd>
