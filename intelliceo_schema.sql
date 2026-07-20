@@ -11,6 +11,17 @@ create table businesses (
     industry text default 'food_and_beverage',
     subscription_tier text default 'starter',  -- 'starter' | 'growth' | future tiers
     price_point numeric default 39.00,
+    -- Stripe billing (see the webhook handler in src/app/api/stripe/webhook/route.ts).
+    -- subscription_status mirrors Stripe's own subscription.status verbatim
+    -- ('trialing' | 'active' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete' |
+    -- 'incomplete_expired' | null if checkout was never started) — deliberately
+    -- not reinvented as a separate app-level enum. Only ever written by the
+    -- webhook (service-role client) or the set_stripe_customer_id() RPC below;
+    -- there is no tenant UPDATE policy on this table.
+    stripe_customer_id text,
+    stripe_subscription_id text,
+    subscription_status text,
+    trial_ends_at timestamptz,
     created_at timestamptz default now()
 );
 
@@ -105,6 +116,17 @@ create table square_credentials (
     updated_at timestamptz default now()
 );
 
+-- ── Stripe webhook idempotency ───────────────────────────────────────────
+-- Stripe can and does redeliver the same event; every webhook event id is
+-- recorded here first (insert ... on conflict do nothing) so a redelivery
+-- is a no-op instead of re-running handler logic twice.
+
+create table stripe_webhook_events (
+    id text primary key,  -- Stripe event.id
+    type text not null,
+    created_at timestamptz default now()
+);
+
 -- ═══════════════════════════════════════════════════════════════════════
 -- ROW-LEVEL SECURITY — this is the actual data-isolation guarantee.
 -- Every table's policy checks that the row's business_id matches the
@@ -119,6 +141,10 @@ alter table brief_history enable row level security;
 alter table marketing_drafts enable row level security;
 alter table knowledge_base_entries enable row level security;
 alter table square_credentials enable row level security;
+-- No policies are ever added for this one — RLS enabled with zero policies
+-- denies all access via the anon/authenticated roles, so only the
+-- service-role client (the webhook handler) can ever touch this table.
+alter table stripe_webhook_events enable row level security;
 
 -- Helper: a user can only see their own business
 create policy "Users see own business"
@@ -214,6 +240,26 @@ end;
 $$;
 
 grant execute on function public.create_business_and_profile(text, text) to authenticated;
+
+-- ═══════════════════════════════════════════════════════════════════════
+-- STRIPE BILLING — same SECURITY DEFINER pattern as record_login() below:
+-- lets a user attach a Stripe customer id to their own business only,
+-- without needing a general tenant UPDATE policy on businesses.
+-- ═══════════════════════════════════════════════════════════════════════
+
+create or replace function public.set_stripe_customer_id(p_customer_id text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update businesses set stripe_customer_id = p_customer_id
+  where id = (select business_id from profiles where id = auth.uid());
+end;
+$$;
+
+grant execute on function public.set_stripe_customer_id(text) to authenticated;
 
 -- ═══════════════════════════════════════════════════════════════════════
 -- PLATFORM ADMIN — internal-only cross-tenant visibility, gated by

@@ -25,6 +25,30 @@ export async function askClaude(
   return block && block.type === "text" ? block.text : null;
 }
 
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+// Multi-turn variant for Chat — unlike askClaude/askClaudeJson (always a
+// single user message, single-shot JSON), this takes a running message
+// history so Claude has the actual conversation, not just the latest turn.
+export async function askClaudeConversation(
+  client: Anthropic,
+  system: string,
+  history: ChatMessage[],
+  maxTokens = 1024
+): Promise<string | null> {
+  const message = await client.messages.create({
+    model: MODEL,
+    max_tokens: maxTokens,
+    system,
+    messages: history,
+  });
+  const block = message.content.find((b) => b.type === "text");
+  return block && block.type === "text" ? block.text : null;
+}
+
 export async function askClaudeJson<T>(
   client: Anthropic,
   system: string,

@@ -8,7 +8,13 @@ export const getSessionState = cache(async () => {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return { user: null, businessId: null as string | null, isPlatformAdmin: false };
+    return {
+      user: null,
+      businessId: null as string | null,
+      isPlatformAdmin: false,
+      subscriptionTier: null as string | null,
+      subscriptionStatus: null as string | null,
+    };
   }
 
   const { data: profile } = await supabase
@@ -17,9 +23,25 @@ export const getSessionState = cache(async () => {
     .eq("id", user.id)
     .maybeSingle();
 
+  const businessId = profile?.business_id ?? null;
+
+  let subscriptionTier: string | null = null;
+  let subscriptionStatus: string | null = null;
+  if (businessId) {
+    const { data: business } = await supabase
+      .from("businesses")
+      .select("subscription_tier, subscription_status")
+      .eq("id", businessId)
+      .maybeSingle();
+    subscriptionTier = business?.subscription_tier ?? null;
+    subscriptionStatus = business?.subscription_status ?? null;
+  }
+
   return {
     user,
-    businessId: profile?.business_id ?? null,
+    businessId,
     isPlatformAdmin: profile?.is_platform_admin ?? false,
+    subscriptionTier,
+    subscriptionStatus,
   };
 });

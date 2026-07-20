@@ -3,8 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionState } from "@/lib/supabase/session";
+import { isGrowthTier } from "@/lib/subscription";
 import { getAnthropicClient, askClaude } from "@/lib/anthropic";
 import { getKbContext } from "@/lib/business-context";
+
+const GROWTH_REQUIRED_ERROR = "Content Studio is a Growth plan feature.";
 
 export type GenerateDraftInput = {
   contentType: string;
@@ -23,7 +26,9 @@ export async function generateDraft(input: GenerateDraftInput): Promise<Generate
   const client = getAnthropicClient();
   if (!client) return { error: "ANTHROPIC_API_KEY isn't configured yet." };
 
-  const { businessId } = await getSessionState();
+  const { businessId, subscriptionTier } = await getSessionState();
+  if (!isGrowthTier(subscriptionTier)) return { error: GROWTH_REQUIRED_ERROR };
+
   const supabase = await createClient();
   const kbContext = await getKbContext(supabase, businessId as string);
 
@@ -56,7 +61,9 @@ export type SaveDraftInput = {
 };
 
 export async function saveDraft(input: SaveDraftInput): Promise<{ error?: string }> {
-  const { businessId } = await getSessionState();
+  const { businessId, subscriptionTier } = await getSessionState();
+  if (!isGrowthTier(subscriptionTier)) return { error: GROWTH_REQUIRED_ERROR };
+
   const supabase = await createClient();
 
   const { error } = await supabase.from("marketing_drafts").insert({

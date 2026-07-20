@@ -20,6 +20,10 @@ export interface Database {
           industry: string | null;
           subscription_tier: string | null;
           price_point: number | null;
+          stripe_customer_id: string | null;
+          stripe_subscription_id: string | null;
+          subscription_status: string | null;
+          trial_ends_at: string | null;
           created_at: string | null;
         };
         Insert: {
@@ -28,6 +32,10 @@ export interface Database {
           industry?: string | null;
           subscription_tier?: string | null;
           price_point?: number | null;
+          stripe_customer_id?: string | null;
+          stripe_subscription_id?: string | null;
+          subscription_status?: string | null;
+          trial_ends_at?: string | null;
           created_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["businesses"]["Insert"]>;
@@ -236,17 +244,36 @@ export interface Database {
           },
         ];
       };
+      stripe_webhook_events: {
+        Row: {
+          id: string;
+          type: string;
+          created_at: string | null;
+        };
+        Insert: {
+          id: string;
+          type: string;
+          created_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["stripe_webhook_events"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
-      // TEMPORARY — see intelliceo_schema.sql for why this SECURITY DEFINER
-      // function exists (pending Supabase support's RLS anomaly response).
+      // See intelliceo_schema.sql for why this SECURITY DEFINER function
+      // exists — root cause confirmed by Supabase support, this is the
+      // permanent bootstrap pattern, not a workaround.
       create_business_and_profile: {
         Args: { business_name: string; business_industry?: string };
         Returns: string;
       };
       record_login: {
         Args: Record<PropertyKey, never>;
+        Returns: undefined;
+      };
+      set_stripe_customer_id: {
+        Args: { p_customer_id: string };
         Returns: undefined;
       };
     };

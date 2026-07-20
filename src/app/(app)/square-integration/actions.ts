@@ -3,6 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionState } from "@/lib/supabase/session";
+import { isGrowthTier } from "@/lib/subscription";
+
+const GROWTH_REQUIRED_ERROR = "Square Integration is a Growth plan feature.";
 
 export type SaveCredentialsInput = { accessToken: string; locationId: string };
 export type SaveCredentialsResult = { error?: string; success?: boolean };
@@ -15,7 +18,8 @@ export async function saveSquareCredentials(
 
   if (!locationId) return { error: "Enter your Square Location ID." };
 
-  const { businessId } = await getSessionState();
+  const { businessId, subscriptionTier } = await getSessionState();
+  if (!isGrowthTier(subscriptionTier)) return { error: GROWTH_REQUIRED_ERROR };
   const id = businessId as string;
   const supabase = await createClient();
 
@@ -55,7 +59,8 @@ export async function saveSquareCredentials(
 export type FetchRevenueResult = { total?: number; error?: string };
 
 export async function fetchSquareMtdRevenue(): Promise<FetchRevenueResult> {
-  const { businessId } = await getSessionState();
+  const { businessId, subscriptionTier } = await getSessionState();
+  if (!isGrowthTier(subscriptionTier)) return { error: GROWTH_REQUIRED_ERROR };
   const id = businessId as string;
   const supabase = await createClient();
 
@@ -126,7 +131,8 @@ export async function fetchSquareMtdRevenue(): Promise<FetchRevenueResult> {
 }
 
 export async function useFetchedRevenue(total: number): Promise<{ error?: string }> {
-  const { businessId } = await getSessionState();
+  const { businessId, subscriptionTier } = await getSessionState();
+  if (!isGrowthTier(subscriptionTier)) return { error: GROWTH_REQUIRED_ERROR };
   const id = businessId as string;
   const supabase = await createClient();
 

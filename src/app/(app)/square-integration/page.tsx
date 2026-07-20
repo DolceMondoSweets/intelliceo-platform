@@ -1,10 +1,13 @@
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionState } from "@/lib/supabase/session";
+import { isGrowthTier } from "@/lib/subscription";
 import { SquareIntegrationClient } from "./square-integration-client";
 
 export default async function SquareIntegrationPage() {
-  const { businessId: id } = await getSessionState();
+  const { businessId: id, subscriptionTier } = await getSessionState();
   const businessId = id as string; // guaranteed by (app)/layout.tsx
+  if (!isGrowthTier(subscriptionTier)) redirect("/upgrade");
   const supabase = await createClient();
 
   const [{ data: creds }, { data: finance }] = await Promise.all([

@@ -37,9 +37,9 @@ export async function completeOnboarding(input: OnboardingInput): Promise<Onboar
   if (!user) return { error: "Your session expired — please log in again." };
 
   // Bootstraps the business + profile link via a SECURITY DEFINER function —
-  // see intelliceo_schema.sql for why (a confirmed Postgres/RLS anomaly on
-  // this specific table, pending Supabase support). Everything after this
-  // uses plain inserts through normal RLS, same as every other module.
+  // see intelliceo_schema.sql for why this is the permanent pattern (root
+  // cause confirmed by Supabase support). Everything after this uses plain
+  // inserts through normal RLS, same as every other module.
   const { data: businessId, error: businessError } = await supabase.rpc(
     "create_business_and_profile",
     { business_name: businessName, business_industry: "food_and_beverage" }
@@ -69,5 +69,5 @@ export async function completeOnboarding(input: OnboardingInput): Promise<Onboar
 
   await supabase.rpc("record_login");
 
-  redirect("/dashboard");
+  redirect("/onboarding/plan");
 }
