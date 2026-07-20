@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getSessionState } from "@/lib/supabase/session";
 import { classifySubscription } from "@/lib/subscription";
 import { AppNav } from "@/components/app-nav";
-import { ChatPanel } from "@/components/chat-panel";
+import { AskBar } from "@/components/ask-bar";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, businessId, subscriptionStatus } = await getSessionState();
@@ -14,10 +14,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (subscriptionState === "inactive") redirect("/reactivate");
 
   return (
-    <div className="flex flex-1">
+    <div className="flex flex-1 flex-col md:flex-row">
       <AppNav />
-      <main className="flex flex-1 flex-col md:ml-64">{children}</main>
-      <ChatPanel />
+      <main className="flex flex-1 flex-col md:ml-64">
+        <AskBar />
+        {children}
+      </main>
     </div>
   );
 }
