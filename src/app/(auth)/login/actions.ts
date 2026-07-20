@@ -13,5 +13,7 @@ export async function logIn(_prevState: AuthState, formData: FormData): Promise<
 
   if (error) return { error: error.message };
 
+  await supabase.rpc("record_login");
+
   redirect("/");
 }

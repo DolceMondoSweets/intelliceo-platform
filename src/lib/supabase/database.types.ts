@@ -39,6 +39,8 @@ export interface Database {
           business_id: string | null;
           full_name: string | null;
           role: string | null;
+          is_platform_admin: boolean;
+          last_login_at: string | null;
           created_at: string | null;
         };
         Insert: {
@@ -46,6 +48,8 @@ export interface Database {
           business_id?: string | null;
           full_name?: string | null;
           role?: string | null;
+          is_platform_admin?: boolean;
+          last_login_at?: string | null;
           created_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
@@ -65,6 +69,9 @@ export interface Database {
           burn: number | null;
           runway: number | null;
           revenue_mtd: number | null;
+          monthly_cogs: number | null;
+          monthly_labor_cost: number | null;
+          cogs_updated_at: string | null;
           updated_at: string | null;
         };
         Insert: {
@@ -73,6 +80,9 @@ export interface Database {
           burn?: number | null;
           runway?: number | null;
           revenue_mtd?: number | null;
+          monthly_cogs?: number | null;
+          monthly_labor_cost?: number | null;
+          cogs_updated_at?: string | null;
           updated_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["finance_data"]["Insert"]>;
@@ -206,12 +216,14 @@ export interface Database {
           business_id: string;
           access_token: string | null;
           location_id: string | null;
+          last_synced_at: string | null;
           updated_at: string | null;
         };
         Insert: {
           business_id: string;
           access_token?: string | null;
           location_id?: string | null;
+          last_synced_at?: string | null;
           updated_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["square_credentials"]["Insert"]>;
@@ -232,6 +244,10 @@ export interface Database {
       create_business_and_profile: {
         Args: { business_name: string; business_industry?: string };
         Returns: string;
+      };
+      record_login: {
+        Args: Record<PropertyKey, never>;
+        Returns: undefined;
       };
     };
     Enums: Record<string, never>;

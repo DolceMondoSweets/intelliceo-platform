@@ -1,7 +1,26 @@
 import { createClient } from "@/lib/supabase/server";
 import { getSessionState } from "@/lib/supabase/session";
 import { Button } from "@/components/ui";
+import { calculateCogsMetrics } from "@/lib/business-context";
 import { signOut } from "./actions";
+
+const COGS_STALE_AFTER_DAYS = 30;
+
+function daysSince(dateStr: string): number {
+  return Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function isCogsStale(cogsUpdatedAt: string | null, revenueMtd: number): boolean {
+  if (cogsUpdatedAt === null) return revenueMtd > 0;
+  return daysSince(cogsUpdatedAt) > COGS_STALE_AFTER_DAYS;
+}
+
+function primeCostColor(pct: number | null): string {
+  if (pct === null) return "#9e9e9e";
+  if (pct <= 65) return "#27ae60";
+  if (pct <= 75) return "#f39c12";
+  return "#e74c3c";
+}
 
 export default async function DashboardPage() {
   const { businessId: id } = await getSessionState();
@@ -18,6 +37,14 @@ export default async function DashboardPage() {
     (kbEntries ?? []).map((entry) => [entry.category, entry.content])
   );
 
+  const revenueMtd = finance?.revenue_mtd ?? 0;
+  const { foodCostPct, primeCostPct } = calculateCogsMetrics(
+    finance?.monthly_cogs ?? null,
+    finance?.monthly_labor_cost ?? null,
+    revenueMtd
+  );
+  const cogsStale = isCogsStale(finance?.cogs_updated_at ?? null, revenueMtd);
+
   return (
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 bg-zinc-50 px-6 py-10 dark:bg-black">
       <div>
@@ -30,6 +57,15 @@ export default async function DashboardPage() {
         <p className="text-sm text-zinc-500 dark:text-zinc-400">{business?.industry}</p>
       </div>
 
+      {cogsStale && (
+        <div className="rounded-lg border-l-4 border-amber-400 bg-amber-50 px-4 py-3 text-sm text-zinc-800 dark:bg-amber-950/30 dark:text-zinc-200">
+          ⚠️{" "}
+          {finance?.cogs_updated_at
+            ? `Your monthly ingredient/labor costs haven't been updated in ${daysSince(finance.cogs_updated_at)} days — head to Settings to confirm they're still accurate.`
+            : "You haven't entered your monthly ingredient/labor costs yet — head to Settings to start tracking your prime cost."}
+        </div>
+      )}
+
       <Section title="Business overview" content={kbByCategory.business_overview} />
       <Section title="Products" content={kbByCategory.products} />
       <Section title="Priorities" content={kbByCategory.priorities} />
@@ -41,7 +77,12 @@ export default async function DashboardPage() {
           <Stat label="Monthly burn" value={finance?.burn} prefix="$" />
           <Stat label="Runway" value={finance?.runway} suffix=" mo" />
           <Stat label="Revenue MTD" value={finance?.revenue_mtd} prefix="$" />
+          <CostStat label="Food cost %" pct={foodCostPct} />
+          <CostStat label="Prime cost %" pct={primeCostPct} />
         </dl>
+        <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
+          Healthy food &amp; beverage prime cost is typically 60–65% of revenue.
+        </p>
       </div>
 
       <form action={signOut}>
@@ -82,6 +123,23 @@ function Stat({
         {prefix}
         {value ?? 0}
         {suffix}
+      </dd>
+    </div>
+  );
+}
+
+function CostStat({ label, pct }: { label: string; pct: number | null }) {
+  return (
+    <div>
+      <dt className="text-xs text-zinc-500 dark:text-zinc-400">{label}</dt>
+      <dd className="text-lg font-semibold" style={{ color: primeCostColor(pct) }}>
+        {pct !== null ? (
+          `${pct.toFixed(1)}%`
+        ) : (
+          <span className="text-sm font-normal text-zinc-400 dark:text-zinc-600">
+            Not yet tracked
+          </span>
+        )}
       </dd>
     </div>
   );

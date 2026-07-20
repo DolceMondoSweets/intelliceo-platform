@@ -137,6 +137,13 @@ export async function useFetchedRevenue(total: number): Promise<{ error?: string
 
   if (error) return { error: error.message };
 
+  // Marks the moment a Square pull actually completed — distinct from
+  // finance_data.updated_at, which also changes on manual Settings edits.
+  await supabase
+    .from("square_credentials")
+    .update({ last_synced_at: new Date().toISOString() })
+    .eq("business_id", id);
+
   revalidatePath("/dashboard");
   revalidatePath("/morning-brief");
   revalidatePath("/square-integration");

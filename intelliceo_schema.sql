@@ -20,6 +20,8 @@ create table profiles (
     business_id uuid references businesses(id) on delete cascade,
     full_name text,
     role text default 'owner',  -- 'owner' | 'staff' (future multi-user support)
+    is_platform_admin boolean not null default false,  -- set manually via SQL only
+    last_login_at timestamptz,  -- set via record_login(), not directly writable by clients
     created_at timestamptz default now()
 );
 
@@ -31,6 +33,12 @@ create table finance_data (
     burn numeric default 0,
     runway integer default 0,
     revenue_mtd numeric default 0,
+    -- Phase A of COGS/prime cost tracking. monthly_cogs is nullable and
+    -- manually entered for now — see the Phase B note next to
+    -- calculateCogsMetrics() in business-context.ts before changing this.
+    monthly_cogs numeric,
+    monthly_labor_cost numeric,
+    cogs_updated_at timestamptz,  -- set only when monthly_cogs/monthly_labor_cost are saved
     updated_at timestamptz default now()
 );
 
@@ -93,6 +101,7 @@ create table square_credentials (
     business_id uuid primary key references businesses(id) on delete cascade,
     access_token text,
     location_id text,
+    last_synced_at timestamptz,  -- set only when a revenue pull actually completes
     updated_at timestamptz default now()
 );
 
@@ -157,16 +166,16 @@ create policy "Tenant isolation: square_credentials"
     using (business_id = (select business_id from profiles where id = auth.uid()));
 
 -- ═══════════════════════════════════════════════════════════════════════
--- TEMPORARY WORKAROUND — pending Supabase support's root-cause response.
--- auth.uid() has been directly proven (via RPC and a raw SQL reproduction
--- bypassing the app/PostgREST/JWT entirely) to resolve correctly; the plain
--- `.from('businesses').insert()` path still fails the trivial
--- `auth.uid() IS NOT NULL` INSERT policy for reasons outside our control.
--- This function bypasses RLS for exactly the two bootstrap inserts
--- onboarding needs, via SECURITY DEFINER, while every other table keeps
--- enforcing RLS normally. Remove/simplify once the underlying anomaly is
--- resolved — completeOnboarding should go back to plain inserts at that
--- point, matching every other tenant-scoped write in this app.
+-- ROOT CAUSE CONFIRMED by Supabase support (closed, not a workaround).
+-- The Supabase client's default `.insert()` requests `return=representation`
+-- (asking Postgres to hand back the newly-created row), which requires the
+-- new row to also satisfy a SELECT policy at that exact instant. The
+-- original code inserted `businesses` before `profiles`, so for a moment no
+-- SELECT policy could yet prove the caller owned that business row, and
+-- Postgres rejected the whole insert. This function creates both rows
+-- atomically, before anything ever asks for a representation back, which is
+-- why it works. This is now the permanent, correct pattern for this bootstrap
+-- step — not a stopgap — so there's nothing to revert later.
 -- ═══════════════════════════════════════════════════════════════════════
 
 -- search_path is pinned explicitly — required hardening for SECURITY
@@ -205,3 +214,68 @@ end;
 $$;
 
 grant execute on function public.create_business_and_profile(text, text) to authenticated;
+
+-- ═══════════════════════════════════════════════════════════════════════
+-- PLATFORM ADMIN — internal-only cross-tenant visibility, gated by
+-- profiles.is_platform_admin (set manually via SQL, never via the app).
+-- ═══════════════════════════════════════════════════════════════════════
+
+-- Records a login timestamp for the caller's own row only — auth.uid() is
+-- read server-side inside the function body, never passed in as a
+-- parameter, so this can't be used to touch anyone else's row (or, since
+-- there's still no general UPDATE policy on profiles, any column a normal
+-- user couldn't otherwise reach — including is_platform_admin itself).
+create or replace function public.record_login()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update profiles set last_login_at = now() where id = auth.uid();
+end;
+$$;
+
+grant execute on function public.record_login() to authenticated;
+
+-- Reads profiles.is_platform_admin via SECURITY DEFINER, bypassing RLS —
+-- required because a policy ON profiles that queries profiles from inside
+-- its own USING clause causes infinite recursion (Postgres error 42P17):
+-- evaluating that policy re-triggers every policy on profiles, including
+-- itself. Routing the check through this function means the inner lookup
+-- never goes through RLS again, so nothing recurses.
+create or replace function public.is_platform_admin()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select coalesce((select is_platform_admin from profiles where id = auth.uid()), false);
+$$;
+
+grant execute on function public.is_platform_admin() to authenticated;
+
+-- Additive policies: permissive policies OR together, so these grant
+-- platform admins full read access across every business without touching
+-- (or weakening) any existing tenant-isolation policy above. Admins get
+-- SELECT only — no cross-tenant writes.
+create policy "Platform admins see all businesses"
+    on businesses for select
+    using (public.is_platform_admin());
+
+create policy "Platform admins see all profiles"
+    on profiles for select
+    using (public.is_platform_admin());
+
+create policy "Platform admins see all decisions"
+    on decisions for select
+    using (public.is_platform_admin());
+
+create policy "Platform admins see all brief_history"
+    on brief_history for select
+    using (public.is_platform_admin());
+
+create policy "Platform admins see all square_credentials"
+    on square_credentials for select
+    using (public.is_platform_admin());

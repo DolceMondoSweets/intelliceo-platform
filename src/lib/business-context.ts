@@ -27,6 +27,35 @@ export async function getKbContext(
     .join("\n\n");
 }
 
+export interface CogsMetrics {
+  foodCostPct: number | null;
+  primeCostPct: number | null;
+}
+
+// PHASE A of COGS/prime cost tracking. `monthlyCogs` is currently always a
+// manually-entered number (finance_data.monthly_cogs, set via Settings).
+// A future Phase B may instead calculate it as a sum from a per-item costs
+// table — this function only ever takes plain numbers in and returns
+// percentages out, deliberately decoupled from WHERE monthlyCogs comes
+// from, so swapping the source later doesn't require changing any caller.
+export function calculateCogsMetrics(
+  monthlyCogs: number | null,
+  monthlyLaborCost: number | null,
+  revenueMtd: number | null
+): CogsMetrics {
+  if (!revenueMtd || revenueMtd <= 0) {
+    return { foodCostPct: null, primeCostPct: null };
+  }
+
+  const foodCostPct = monthlyCogs !== null ? (monthlyCogs / revenueMtd) * 100 : null;
+  const primeCostPct =
+    monthlyCogs !== null && monthlyLaborCost !== null
+      ? ((monthlyCogs + monthlyLaborCost) / revenueMtd) * 100
+      : null;
+
+  return { foodCostPct, primeCostPct };
+}
+
 export async function getFinanceSnapshot(
   supabase: SupabaseClient<Database>,
   businessId: string
@@ -41,12 +70,19 @@ export async function getFinanceSnapshot(
   const burn = data?.burn ?? 0;
   const runway = data?.runway ?? 0;
   const revenueMtd = data?.revenue_mtd ?? 0;
+  const monthlyCogs = data?.monthly_cogs ?? null;
+  const monthlyLaborCost = data?.monthly_labor_cost ?? null;
+  const { foodCostPct, primeCostPct } = calculateCogsMetrics(monthlyCogs, monthlyLaborCost, revenueMtd);
 
   return (
     `Current Cash Balance: $${cash.toLocaleString()}\n` +
     `Monthly Burn Rate: $${burn.toLocaleString()}\n` +
     `Runway: ${runway} days\n` +
     `Month-to-Date Revenue: $${revenueMtd.toLocaleString()}\n` +
+    `Monthly COGS (ingredients/supplies): ${monthlyCogs !== null ? `$${monthlyCogs.toLocaleString()}` : "Not yet tracked"}\n` +
+    `Monthly Labor Cost: ${monthlyLaborCost !== null ? `$${monthlyLaborCost.toLocaleString()}` : "Not yet tracked"}\n` +
+    `Food Cost % (COGS / Revenue): ${foodCostPct !== null ? `${foodCostPct.toFixed(1)}%` : "Not yet tracked"}\n` +
+    `Prime Cost % ((COGS + Labor) / Revenue): ${primeCostPct !== null ? `${primeCostPct.toFixed(1)}%` : "Not yet tracked"} — healthy range for food & beverage is typically 60-65%\n` +
     `Today's Date: ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`
   );
 }

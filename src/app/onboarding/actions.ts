@@ -67,5 +67,7 @@ export async function completeOnboarding(input: OnboardingInput): Promise<Onboar
 
   if (financeError) return { error: financeError.message };
 
+  await supabase.rpc("record_login");
+
   redirect("/dashboard");
 }

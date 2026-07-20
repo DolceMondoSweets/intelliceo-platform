@@ -8,9 +8,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!businessId) redirect("/onboarding");
 
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="flex flex-1">
       <AppNav />
-      <div className="flex flex-1 flex-col">{children}</div>
+      <main className="flex flex-1 flex-col md:ml-64">{children}</main>
     </div>
   );
 }
