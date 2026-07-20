@@ -116,6 +116,29 @@ create table square_credentials (
     updated_at timestamptz default now()
 );
 
+-- ── Chat: persistent per-business conversation history ──────────────────
+-- Every message (both roles) is stored permanently and never deleted —
+-- chat_summary tracks a rolling summary of everything older than the
+-- recent verbatim window, so old messages stay in chat_messages for the
+-- record even after they've been folded into the summary.
+
+create table chat_messages (
+    id uuid primary key default gen_random_uuid(),
+    business_id uuid references businesses(id) on delete cascade,
+    role text not null,  -- 'user' | 'assistant'
+    content text not null,
+    created_at timestamptz default now()
+);
+
+create table chat_summary (
+    business_id uuid primary key references businesses(id) on delete cascade,
+    summary text,
+    -- messages with created_at <= summarized_through have already been
+    -- folded into `summary`; the recent verbatim window is everything after.
+    summarized_through timestamptz,
+    updated_at timestamptz default now()
+);
+
 -- ── Stripe webhook idempotency ───────────────────────────────────────────
 -- Stripe can and does redeliver the same event; every webhook event id is
 -- recorded here first (insert ... on conflict do nothing) so a redelivery
@@ -141,6 +164,8 @@ alter table brief_history enable row level security;
 alter table marketing_drafts enable row level security;
 alter table knowledge_base_entries enable row level security;
 alter table square_credentials enable row level security;
+alter table chat_messages enable row level security;
+alter table chat_summary enable row level security;
 -- No policies are ever added for this one — RLS enabled with zero policies
 -- denies all access via the anon/authenticated roles, so only the
 -- service-role client (the webhook handler) can ever touch this table.
@@ -189,6 +214,14 @@ create policy "Tenant isolation: knowledge_base_entries"
 
 create policy "Tenant isolation: square_credentials"
     on square_credentials for all
+    using (business_id = (select business_id from profiles where id = auth.uid()));
+
+create policy "Tenant isolation: chat_messages"
+    on chat_messages for all
+    using (business_id = (select business_id from profiles where id = auth.uid()));
+
+create policy "Tenant isolation: chat_summary"
+    on chat_summary for all
     using (business_id = (select business_id from profiles where id = auth.uid()));
 
 -- ═══════════════════════════════════════════════════════════════════════

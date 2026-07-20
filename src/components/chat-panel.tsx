@@ -2,22 +2,34 @@
 
 import { useState, useTransition } from "react";
 import { Button, inputClass } from "@/components/ui";
-import { askChat } from "@/app/(app)/chat/actions";
-import type { ChatMessage } from "@/lib/anthropic";
+import { askChat, getChatHistory, type StoredChatMessage } from "@/app/(app)/chat/actions";
 
 export function ChatPanel() {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [hasLoadedHistory, setHasLoadedHistory] = useState(false);
+  const [messages, setMessages] = useState<StoredChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [isLoadingHistory, startHistoryTransition] = useTransition();
 
-  // Session-only memory: closing the panel resets the conversation.
+  // Persistent memory: history is stored server-side (chat_messages), so
+  // opening the panel loads the real conversation rather than starting
+  // blank. Only fetched once per mount — new messages append locally as
+  // they're sent/received, keeping this in sync without re-fetching.
+  function handleOpen() {
+    setIsOpen(true);
+    if (!hasLoadedHistory) {
+      startHistoryTransition(async () => {
+        const history = await getChatHistory();
+        setMessages(history);
+        setHasLoadedHistory(true);
+      });
+    }
+  }
+
   function handleClose() {
     setIsOpen(false);
-    setMessages([]);
-    setInput("");
-    setError(null);
   }
 
   function handleSend() {
@@ -26,17 +38,19 @@ export function ChatPanel() {
 
     setError(null);
     setInput("");
-    const history = messages;
-    setMessages([...history, { role: "user", content: text }]);
+    setMessages((prev) => [...prev, { role: "user", content: text, createdAt: new Date().toISOString() }]);
 
     startTransition(async () => {
-      const result = await askChat(history, text);
+      const result = await askChat(text);
       if (result.error) {
         setError(result.error);
         return;
       }
       if (result.reply) {
-        setMessages((prev) => [...prev, { role: "assistant", content: result.reply! }]);
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: result.reply!, createdAt: new Date().toISOString() },
+        ]);
       }
     });
   }
@@ -46,7 +60,7 @@ export function ChatPanel() {
       {!isOpen && (
         <button
           type="button"
-          onClick={() => setIsOpen(true)}
+          onClick={handleOpen}
           aria-label="Open chat"
           className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-zinc-900 text-white shadow-lg hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
         >
@@ -82,7 +96,10 @@ export function ChatPanel() {
         </div>
 
         <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
-          {messages.length === 0 && (
+          {isLoadingHistory && (
+            <p className="text-sm text-zinc-400 dark:text-zinc-600">Loading conversation…</p>
+          )}
+          {!isLoadingHistory && messages.length === 0 && (
             <p className="text-sm text-zinc-400 dark:text-zinc-600">
               Ask about your finances, priorities, or anything else about your business — I can
               see your current data.

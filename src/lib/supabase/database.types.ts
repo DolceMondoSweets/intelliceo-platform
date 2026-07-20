@@ -258,6 +258,54 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["stripe_webhook_events"]["Insert"]>;
         Relationships: [];
       };
+      chat_messages: {
+        Row: {
+          id: string;
+          business_id: string | null;
+          role: string;
+          content: string;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          business_id?: string | null;
+          role: string;
+          content: string;
+          created_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["chat_messages"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_business_id_fkey";
+            columns: ["business_id"];
+            referencedRelation: "businesses";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      chat_summary: {
+        Row: {
+          business_id: string;
+          summary: string | null;
+          summarized_through: string | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          business_id: string;
+          summary?: string | null;
+          summarized_through?: string | null;
+          updated_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["chat_summary"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "chat_summary_business_id_fkey";
+            columns: ["business_id"];
+            referencedRelation: "businesses";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: {
