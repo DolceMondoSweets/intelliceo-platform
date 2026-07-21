@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getSessionState } from "@/lib/supabase/session";
+import { calculateRunwayMonths, formatRunwayMonths } from "@/lib/business-context";
 import { MorningBriefClient } from "./morning-brief-client";
 
 export default async function MorningBriefPage() {
@@ -29,7 +30,8 @@ export default async function MorningBriefPage() {
 
       <div className="rounded-xl border-l-4 border-emerald-500 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300">
         Cash: ${(finance?.cash ?? 0).toLocaleString()} | Burn: $
-        {(finance?.burn ?? 0).toLocaleString()} | Runway: {finance?.runway ?? 0} days | MTD
+        {(finance?.burn ?? 0).toLocaleString()} | Runway:{" "}
+        {formatRunwayMonths(calculateRunwayMonths(finance?.cash ?? 0, finance?.burn ?? 0))} | MTD
         Revenue: ${(finance?.revenue_mtd ?? 0).toLocaleString()}
       </div>
 

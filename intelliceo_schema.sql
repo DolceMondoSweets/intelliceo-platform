@@ -46,7 +46,8 @@ create table finance_data (
     business_id uuid primary key references businesses(id) on delete cascade,
     cash numeric default 0,
     burn numeric default 0,
-    runway integer default 0,
+    -- runway is derived (cash / burn) wherever it's displayed — see
+    -- calculateRunwayMonths() in business-context.ts — never stored.
     revenue_mtd numeric default 0,
     -- Phase A of COGS/prime cost tracking. monthly_cogs is nullable and
     -- manually entered for now — see the Phase B note next to

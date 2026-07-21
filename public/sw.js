@@ -1,5 +1,5 @@
-const CACHE_NAME = "intelliceo-shell-v1";
-const SHELL_ASSETS = ["/", "/manifest.webmanifest"];
+const CACHE_NAME = "intelliceo-shell-v2";
+const SHELL_ASSETS = ["/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

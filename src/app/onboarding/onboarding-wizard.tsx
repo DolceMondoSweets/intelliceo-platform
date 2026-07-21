@@ -13,7 +13,6 @@ const initialValues: OnboardingInput = {
   priorities: "",
   cash: "",
   burn: "",
-  runway: "",
   revenueMtd: "",
 };
 
@@ -141,11 +140,6 @@ export function OnboardingWizard() {
             label="Monthly burn ($)"
             value={values.burn}
             onChange={(v) => update("burn", v)}
-          />
-          <NumberField
-            label="Runway (months)"
-            value={values.runway}
-            onChange={(v) => update("runway", v)}
           />
           <NumberField
             label="Revenue this month ($)"

@@ -115,7 +115,6 @@ export async function updateKnowledgeBase(input: KnowledgeBaseInput): Promise<Se
 export type FinanceSnapshotInput = {
   cash: string;
   burn: string;
-  runway: string;
   monthlyCogs: string;
   monthlyLaborCost: string;
 };
@@ -147,7 +146,6 @@ export async function updateFinanceSnapshot(input: FinanceSnapshotInput): Promis
     business_id: id,
     cash: toNumber(input.cash),
     burn: toNumber(input.burn),
-    runway: Math.round(toNumber(input.runway)),
     monthly_cogs: monthlyCogs,
     monthly_labor_cost: monthlyLaborCost,
     updated_at: new Date().toISOString(),

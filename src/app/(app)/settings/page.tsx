@@ -4,7 +4,7 @@ import { getBusinessBrand } from "@/lib/business-brand";
 import { SettingsClient } from "./settings-client";
 
 export default async function SettingsPage() {
-  const { businessId: id } = await getSessionState();
+  const { businessId: id, isPlatformAdmin } = await getSessionState();
   const businessId = id as string; // guaranteed by (app)/layout.tsx
   const supabase = await createClient();
 
@@ -13,7 +13,7 @@ export default async function SettingsPage() {
     supabase.from("knowledge_base_entries").select("category, content").eq("business_id", businessId),
     supabase
       .from("finance_data")
-      .select("cash, burn, runway, monthly_cogs, monthly_labor_cost")
+      .select("cash, burn, monthly_cogs, monthly_labor_cost")
       .eq("business_id", businessId)
       .maybeSingle(),
   ]);
@@ -39,9 +39,9 @@ export default async function SettingsPage() {
         priorities={kbByCategory.priorities ?? ""}
         cash={finance?.cash ?? 0}
         burn={finance?.burn ?? 0}
-        runway={finance?.runway ?? 0}
         monthlyCogs={finance?.monthly_cogs ?? null}
         monthlyLaborCost={finance?.monthly_labor_cost ?? null}
+        isPlatformAdmin={isPlatformAdmin}
       />
     </div>
   );

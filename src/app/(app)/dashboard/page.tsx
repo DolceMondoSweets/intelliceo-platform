@@ -1,7 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { getSessionState } from "@/lib/supabase/session";
 import { getBusinessBrand } from "@/lib/business-brand";
-import { calculateCogsMetrics, type CogsMetric } from "@/lib/business-context";
+import {
+  calculateCogsMetrics,
+  calculateRunwayMonths,
+  formatRunwayMonths,
+  type CogsMetric,
+} from "@/lib/business-context";
 import { BusinessInfoDisclosure } from "./business-info-disclosure";
 
 const COGS_STALE_AFTER_DAYS = 30;
@@ -44,6 +49,7 @@ export default async function DashboardPage({
   );
 
   const revenueMtd = finance?.revenue_mtd ?? 0;
+  const runwayMonths = calculateRunwayMonths(finance?.cash ?? 0, finance?.burn ?? 0);
   const { foodCost, primeCost } = calculateCogsMetrics(
     finance?.monthly_cogs ?? null,
     finance?.monthly_labor_cost ?? null,
@@ -88,7 +94,7 @@ export default async function DashboardPage({
         <dl className="mt-4 grid grid-cols-2 gap-5 sm:grid-cols-3">
           <Stat label="Cash" value={finance?.cash} prefix="$" />
           <Stat label="Monthly burn" value={finance?.burn} prefix="$" />
-          <Stat label="Runway" value={finance?.runway} suffix=" mo" />
+          <Stat label="Runway" display={formatRunwayMonths(runwayMonths)} />
           <Stat label="Revenue MTD" value={finance?.revenue_mtd} prefix="$" />
           <CostStat label="Food cost %" metric={foodCost} />
           <CostStat label="Prime cost %" metric={primeCost} />
@@ -124,19 +130,25 @@ function Stat({
   value,
   prefix,
   suffix,
+  display,
 }: {
   label: string;
   value?: number | null;
   prefix?: string;
   suffix?: string;
+  display?: string;
 }) {
   return (
     <div>
       <dt className="text-sm text-zinc-500 dark:text-zinc-400">{label}</dt>
       <dd className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
-        {prefix}
-        {value ?? 0}
-        {suffix}
+        {display ?? (
+          <>
+            {prefix}
+            {value ?? 0}
+            {suffix}
+          </>
+        )}
       </dd>
     </div>
   );

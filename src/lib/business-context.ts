@@ -44,6 +44,18 @@ export interface CogsMetrics {
   primeCost: CogsMetric;
 }
 
+// Runway is always derived from cash/burn, never stored — a burn of 0 (or
+// negative) means it can't be calculated (or is effectively infinite), not
+// a divide-by-zero error.
+export function calculateRunwayMonths(cash: number, burn: number): number | null {
+  if (burn <= 0) return null;
+  return cash / burn;
+}
+
+export function formatRunwayMonths(months: number | null): string {
+  return months === null ? "N/A" : `${months.toFixed(1)} mo`;
+}
+
 // PHASE A of COGS/prime cost tracking. `monthlyCogs` is currently always a
 // manually-entered number (finance_data.monthly_cogs, set via Settings).
 // A future Phase B may instead calculate it as a sum from a per-item costs
@@ -92,7 +104,7 @@ export async function getFinanceSnapshot(
 
   const cash = data?.cash ?? 0;
   const burn = data?.burn ?? 0;
-  const runway = data?.runway ?? 0;
+  const runway = formatRunwayMonths(calculateRunwayMonths(cash, burn));
   const revenueMtd = data?.revenue_mtd ?? 0;
   const monthlyCogs = data?.monthly_cogs ?? null;
   const monthlyLaborCost = data?.monthly_labor_cost ?? null;
@@ -101,7 +113,7 @@ export async function getFinanceSnapshot(
   return (
     `Current Cash Balance: $${cash.toLocaleString()}\n` +
     `Monthly Burn Rate: $${burn.toLocaleString()}\n` +
-    `Runway: ${runway} days\n` +
+    `Runway: ${runway}\n` +
     `Month-to-Date Revenue: $${revenueMtd.toLocaleString()}\n` +
     `Monthly COGS (ingredients/supplies): ${monthlyCogs !== null ? `$${monthlyCogs.toLocaleString()}` : "Not yet tracked"}\n` +
     `Monthly Labor Cost: ${monthlyLaborCost !== null ? `$${monthlyLaborCost.toLocaleString()}` : "Not yet tracked"}\n` +

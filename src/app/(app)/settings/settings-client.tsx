@@ -18,9 +18,9 @@ export function SettingsClient({
   priorities: initialPriorities,
   cash: initialCash,
   burn: initialBurn,
-  runway: initialRunway,
   monthlyCogs: initialMonthlyCogs,
   monthlyLaborCost: initialMonthlyLaborCost,
+  isPlatformAdmin,
 }: {
   businessName: string;
   logoUrl: string | null;
@@ -29,9 +29,9 @@ export function SettingsClient({
   priorities: string;
   cash: number;
   burn: number;
-  runway: number;
   monthlyCogs: number | null;
   monthlyLaborCost: number | null;
+  isPlatformAdmin: boolean;
 }) {
   const [businessName, setBusinessName] = useState(initialBusinessName);
   const [nameError, setNameError] = useState<string | null>(null);
@@ -91,7 +91,6 @@ export function SettingsClient({
 
   const [cash, setCash] = useState(String(initialCash));
   const [burn, setBurn] = useState(String(initialBurn));
-  const [runway, setRunway] = useState(String(initialRunway));
   const [monthlyCogs, setMonthlyCogs] = useState(
     initialMonthlyCogs !== null ? String(initialMonthlyCogs) : ""
   );
@@ -106,7 +105,7 @@ export function SettingsClient({
     setFinanceError(null);
     setFinanceSaved(false);
     startFinanceTransition(async () => {
-      const result = await updateFinanceSnapshot({ cash, burn, runway, monthlyCogs, monthlyLaborCost });
+      const result = await updateFinanceSnapshot({ cash, burn, monthlyCogs, monthlyLaborCost });
       if (result.error) setFinanceError(result.error);
       else setFinanceSaved(true);
     });
@@ -246,21 +245,6 @@ export function SettingsClient({
         </div>
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-            Runway (months)
-          </label>
-          <input
-            type="number"
-            inputMode="decimal"
-            value={runway}
-            onChange={(e) => {
-              setRunway(e.target.value);
-              setFinanceSaved(false);
-            }}
-            className={inputClass}
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
             Ingredient/supply cost this month ($)
           </label>
           <input
@@ -302,24 +286,26 @@ export function SettingsClient({
         </Button>
       </section>
 
-      <section className="flex flex-col gap-3 rounded-2xl border border-zinc-200 p-4 dark:border-zinc-800">
-        <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Diagnostics</h2>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">
-          Throws a real error from a click handler, to confirm Sentry is receiving events.
-        </p>
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => {
-            throw new Error("test");
-          }}
-          className="self-start"
-        >
-          Trigger Test Error
-        </Button>
-      </section>
+      {isPlatformAdmin && (
+        <section className="flex flex-col gap-3 rounded-2xl border border-zinc-200 p-4 dark:border-zinc-800">
+          <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Diagnostics</h2>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            Throws a real error from a click handler, to confirm Sentry is receiving events.
+          </p>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              throw new Error("test");
+            }}
+            className="self-start"
+          >
+            Trigger Test Error
+          </Button>
+        </section>
+      )}
 
-      <form action={signOut}>
+      <form action={signOut} className="mt-4 border-t border-zinc-200 pt-6 dark:border-zinc-800">
         <Button type="submit" variant="secondary" className="w-full">
           Log out
         </Button>

@@ -10,7 +10,6 @@ export interface OnboardingInput {
   priorities: string;
   cash: string;
   burn: string;
-  runway: string;
   revenueMtd: string;
 }
 
@@ -61,7 +60,6 @@ export async function completeOnboarding(input: OnboardingInput): Promise<Onboar
     business_id: businessId,
     cash: toNumber(input.cash),
     burn: toNumber(input.burn),
-    runway: Math.round(toNumber(input.runway)),
     revenue_mtd: toNumber(input.revenueMtd),
   });
 
