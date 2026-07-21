@@ -7,7 +7,7 @@ import { ContentStudioClient } from "./content-studio-client";
 export default async function ContentStudioPage() {
   const { businessId: id, subscriptionTier } = await getSessionState();
   const businessId = id as string; // guaranteed by (app)/layout.tsx
-  if (!isGrowthTier(subscriptionTier)) redirect("/upgrade");
+  if (!isGrowthTier(subscriptionTier)) redirect("/upgrade?from=/content-studio");
   const supabase = await createClient();
 
   const { data: drafts } = await supabase

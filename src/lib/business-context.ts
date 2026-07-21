@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
+import { calculateCogsMetrics, calculateRunwayMonths, formatRunwayMonths, formatCogsMetric } from "@/lib/financial-formulas";
 
 const CATEGORY_LABELS: Record<string, string> = {
   business_overview: "Business Overview",
@@ -25,71 +26,6 @@ export async function getKbContext(
   return entries
     .map((entry) => `### ${CATEGORY_LABELS[entry.category ?? ""] ?? entry.category}\n${entry.content}`)
     .join("\n\n");
-}
-
-// "not_tracked": the underlying cost hasn't been entered yet.
-// "no_revenue": the cost IS entered, but revenue_mtd is 0/null so the ratio
-// is undefined — distinct from not_tracked because the data exists, revenue
-// just doesn't yet (e.g. a seasonal business that's currently closed).
-// "ok": both inputs present and revenue is positive — pct is a real number.
-export type CogsMetricStatus = "not_tracked" | "no_revenue" | "ok";
-
-export interface CogsMetric {
-  status: CogsMetricStatus;
-  pct: number | null;
-}
-
-export interface CogsMetrics {
-  foodCost: CogsMetric;
-  primeCost: CogsMetric;
-}
-
-// Runway is always derived from cash/burn, never stored — a burn of 0 (or
-// negative) means it can't be calculated (or is effectively infinite), not
-// a divide-by-zero error.
-export function calculateRunwayMonths(cash: number, burn: number): number | null {
-  if (burn <= 0) return null;
-  return cash / burn;
-}
-
-export function formatRunwayMonths(months: number | null): string {
-  return months === null ? "N/A" : `${months.toFixed(1)} mo`;
-}
-
-// PHASE A of COGS/prime cost tracking. `monthlyCogs` is currently always a
-// manually-entered number (finance_data.monthly_cogs, set via Settings).
-// A future Phase B may instead calculate it as a sum from a per-item costs
-// table — this function only ever takes plain numbers in and returns
-// percentages out, deliberately decoupled from WHERE monthlyCogs comes
-// from, so swapping the source later doesn't require changing any caller.
-export function calculateCogsMetrics(
-  monthlyCogs: number | null,
-  monthlyLaborCost: number | null,
-  revenueMtd: number | null
-): CogsMetrics {
-  const hasRevenue = revenueMtd !== null && revenueMtd > 0;
-
-  const foodCost: CogsMetric =
-    monthlyCogs === null
-      ? { status: "not_tracked", pct: null }
-      : !hasRevenue
-        ? { status: "no_revenue", pct: null }
-        : { status: "ok", pct: (monthlyCogs / revenueMtd) * 100 };
-
-  const primeCost: CogsMetric =
-    monthlyCogs === null || monthlyLaborCost === null
-      ? { status: "not_tracked", pct: null }
-      : !hasRevenue
-        ? { status: "no_revenue", pct: null }
-        : { status: "ok", pct: ((monthlyCogs + monthlyLaborCost) / revenueMtd) * 100 };
-
-  return { foodCost, primeCost };
-}
-
-function formatCogsMetric(metric: CogsMetric): string {
-  if (metric.status === "ok" && metric.pct !== null) return `${metric.pct.toFixed(1)}%`;
-  if (metric.status === "no_revenue") return "Can't calculate — no revenue recorded this month";
-  return "Not yet tracked";
 }
 
 export async function getFinanceSnapshot(

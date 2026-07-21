@@ -8,6 +8,7 @@ export interface OnboardingInput {
   overview: string;
   products: string;
   priorities: string;
+  posSystem: string;
   cash: string;
   burn: string;
   revenueMtd: string;
@@ -67,5 +68,8 @@ export async function completeOnboarding(input: OnboardingInput): Promise<Onboar
 
   await supabase.rpc("record_login");
 
-  redirect("/onboarding/plan");
+  // Not persisted anywhere — only used to decide whether Growth is offered
+  // on the plan picker (Square/Clover unlock it, Toast/Other-None don't).
+  const posSystem = input.posSystem.trim();
+  redirect(`/onboarding/plan${posSystem ? `?pos=${encodeURIComponent(posSystem)}` : ""}`);
 }

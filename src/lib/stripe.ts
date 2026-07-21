@@ -29,3 +29,10 @@ export const PRICE_ID_BY_TIER: Record<SubscriptionTier, string> = {
   starter: process.env.STRIPE_PRICE_STARTER ?? "",
   growth: process.env.STRIPE_PRICE_GROWTH ?? "",
 };
+
+// Single source of truth for tier display copy — was previously duplicated
+// as raw strings in the onboarding plan picker and the /upgrade page.
+export const TIER_DISPLAY: Record<SubscriptionTier, { name: string; price: string }> = {
+  starter: { name: "Starter", price: "$59/mo" },
+  growth: { name: "Growth", price: "$89/mo" },
+};

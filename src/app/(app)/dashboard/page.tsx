@@ -1,13 +1,19 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionState } from "@/lib/supabase/session";
 import { getBusinessBrand } from "@/lib/business-brand";
 import {
+  calculateBreakEven,
+  calculateBudgetLine,
   calculateCogsMetrics,
   calculateRunwayMonths,
   formatRunwayMonths,
   type CogsMetric,
-} from "@/lib/business-context";
+} from "@/lib/financial-formulas";
 import { BusinessInfoDisclosure } from "./business-info-disclosure";
+import { BudgetComparison } from "./budget-comparison";
+import { BreakEvenCard } from "./break-even-card";
+import { WhatIfCalculator } from "./what-if-calculator";
 
 const COGS_STALE_AFTER_DAYS = 30;
 
@@ -37,25 +43,36 @@ export default async function DashboardPage({
   const supabase = await createClient();
   const { welcome } = await searchParams;
 
-  const [brand, { data: business }, { data: kbEntries }, { data: finance }] = await Promise.all([
-    getBusinessBrand(supabase, businessId),
-    supabase.from("businesses").select("industry").eq("id", businessId).single(),
-    supabase.from("knowledge_base_entries").select("category, content").eq("business_id", businessId),
-    supabase.from("finance_data").select("*").eq("business_id", businessId).maybeSingle(),
-  ]);
+  const [brand, { data: business }, { data: kbEntries }, { data: finance }, { count: activeGoals }] =
+    await Promise.all([
+      getBusinessBrand(supabase, businessId),
+      supabase.from("businesses").select("industry").eq("id", businessId).single(),
+      supabase.from("knowledge_base_entries").select("category, content").eq("business_id", businessId),
+      supabase.from("finance_data").select("*").eq("business_id", businessId).maybeSingle(),
+      supabase
+        .from("goals")
+        .select("id", { count: "exact", head: true })
+        .eq("business_id", businessId)
+        .eq("status", "Active"),
+    ]);
 
   const kbByCategory = Object.fromEntries(
     (kbEntries ?? []).map((entry) => [entry.category, entry.content])
   );
 
+  const cash = finance?.cash ?? 0;
+  const burn = finance?.burn ?? 0;
   const revenueMtd = finance?.revenue_mtd ?? 0;
-  const runwayMonths = calculateRunwayMonths(finance?.cash ?? 0, finance?.burn ?? 0);
-  const { foodCost, primeCost } = calculateCogsMetrics(
-    finance?.monthly_cogs ?? null,
-    finance?.monthly_labor_cost ?? null,
-    revenueMtd
-  );
+  const monthlyCogs = finance?.monthly_cogs ?? null;
+  const monthlyLaborCost = finance?.monthly_labor_cost ?? null;
+
+  const runwayMonths = calculateRunwayMonths(cash, burn);
+  const { foodCost, primeCost } = calculateCogsMetrics(monthlyCogs, monthlyLaborCost, revenueMtd);
   const cogsStale = isCogsStale(finance?.cogs_updated_at ?? null, revenueMtd);
+  const breakEven = calculateBreakEven(burn, foodCost.pct);
+  const budgetRevenue = calculateBudgetLine(revenueMtd, finance?.budgeted_revenue ?? null);
+  const budgetCogs = calculateBudgetLine(monthlyCogs, finance?.budgeted_cogs ?? null);
+  const budgetLabor = calculateBudgetLine(monthlyLaborCost, finance?.budgeted_labor ?? null);
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 bg-zinc-50 px-6 py-10 dark:bg-black">
@@ -104,7 +121,33 @@ export default async function DashboardPage({
         </p>
       </div>
 
-      <Section title="Priorities" content={kbByCategory.priorities} />
+      <BudgetComparison revenue={budgetRevenue} cogs={budgetCogs} labor={budgetLabor} />
+
+      <BreakEvenCard result={breakEven} revenueMtd={revenueMtd} />
+
+      <WhatIfCalculator
+        cash={cash}
+        burn={burn}
+        revenueMtd={revenueMtd}
+        monthlyCogs={monthlyCogs}
+        monthlyLaborCost={monthlyLaborCost}
+      />
+
+      <div className="flex flex-col gap-3">
+        <Section title="Priorities" content={kbByCategory.priorities} />
+        <Link
+          href="/goals"
+          className="flex items-center justify-between rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-900"
+        >
+          <span>
+            🎯{" "}
+            {activeGoals && activeGoals > 0
+              ? `${activeGoals} active goal${activeGoals === 1 ? "" : "s"} — track progress`
+              : "Turn a priority into a trackable goal"}
+          </span>
+          <span>→</span>
+        </Link>
+      </div>
 
       <BusinessInfoDisclosure
         overview={kbByCategory.business_overview ?? null}

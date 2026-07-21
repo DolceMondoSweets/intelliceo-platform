@@ -3,7 +3,11 @@ import { getSessionState } from "@/lib/supabase/session";
 import { classifySubscription, isGrowthTier } from "@/lib/subscription";
 import { UpgradeButton } from "./upgrade-button";
 
-export default async function UpgradePage() {
+export default async function UpgradePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string }>;
+}) {
   const { user, businessId, subscriptionStatus, subscriptionTier } = await getSessionState();
   if (!user) redirect("/login");
   if (!businessId) redirect("/onboarding");
@@ -13,6 +17,8 @@ export default async function UpgradePage() {
   if (subscriptionState === "inactive") redirect("/reactivate");
   if (isGrowthTier(subscriptionTier)) redirect("/dashboard");
 
+  const { from } = await searchParams;
+
   return (
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 bg-zinc-50 px-6 py-10 dark:bg-black">
       <div>
@@ -20,11 +26,11 @@ export default async function UpgradePage() {
           This is a Growth feature
         </h1>
         <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          Content Studio and Square Integration are included on the Growth plan ($89/mo).
-          Manage your billing to switch plans — the change is prorated automatically.
+          Content Studio and POS Integration (Square or Clover) are included on the Growth plan
+          ($89/mo). Upgrade now and you&apos;ll land right back here, unlocked.
         </p>
       </div>
-      <UpgradeButton />
+      <UpgradeButton returnTo={from} />
     </div>
   );
 }

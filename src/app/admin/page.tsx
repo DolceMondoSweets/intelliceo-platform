@@ -18,7 +18,7 @@ export default async function AdminPage() {
 
   const supabase = await createClient();
 
-  const [{ data: businesses }, { data: profiles }, { data: decisions }, { data: briefs }, { data: squareCreds }] =
+  const [{ data: businesses }, { data: profiles }, { data: decisions }, { data: briefs }, { data: posCreds }] =
     await Promise.all([
       supabase
         .from("businesses")
@@ -27,7 +27,7 @@ export default async function AdminPage() {
       supabase.from("profiles").select("business_id, last_login_at"),
       supabase.from("decisions").select("business_id, status"),
       supabase.from("brief_history").select("business_id, brief_date"),
-      supabase.from("square_credentials").select("business_id, last_synced_at"),
+      supabase.from("pos_credentials").select("business_id, last_synced_at"),
     ]);
 
   const lastLoginByBusiness = new Map<string, string>();
@@ -51,7 +51,7 @@ export default async function AdminPage() {
   }
 
   const lastSyncByBusiness = new Map<string, string>();
-  for (const s of squareCreds ?? []) {
+  for (const s of posCreds ?? []) {
     if (!s.business_id || !s.last_synced_at) continue;
     lastSyncByBusiness.set(s.business_id, s.last_synced_at);
   }
@@ -68,7 +68,7 @@ export default async function AdminPage() {
       daysInactive,
       isInactive: daysInactive === null || daysInactive >= INACTIVITY_THRESHOLD_DAYS,
       lastBrief: lastBriefByBusiness.get(b.id) ?? null,
-      lastSquareSync: lastSyncByBusiness.get(b.id) ?? null,
+      lastPosSync: lastSyncByBusiness.get(b.id) ?? null,
       openDecisions: openDecisionsByBusiness.get(b.id) ?? 0,
     };
   });
@@ -138,7 +138,7 @@ export default async function AdminPage() {
               <th className="px-4 py-3">Tier</th>
               <th className="px-4 py-3">Last Login</th>
               <th className="px-4 py-3">Last Brief</th>
-              <th className="px-4 py-3">Last Square Sync</th>
+              <th className="px-4 py-3">Last POS Sync</th>
               <th className="px-4 py-3">Open Decisions</th>
             </tr>
           </thead>
@@ -169,7 +169,7 @@ export default async function AdminPage() {
                   {b.lastBrief ? new Date(b.lastBrief).toLocaleDateString() : "—"}
                 </td>
                 <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
-                  {b.lastSquareSync ? new Date(b.lastSquareSync).toLocaleDateString() : "—"}
+                  {b.lastPosSync ? new Date(b.lastPosSync).toLocaleDateString() : "—"}
                 </td>
                 <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">{b.openDecisions}</td>
               </tr>

@@ -28,11 +28,11 @@ const PLANS: {
     tier: "growth",
     name: "Growth",
     price: "$89/mo",
-    features: ["Everything in Starter", "Content Studio", "Square Integration"],
+    features: ["Everything in Starter", "Content Studio", "POS Integration (Square or Clover)"],
   },
 ];
 
-export function PlanPicker() {
+export function PlanPicker({ growthAvailable }: { growthAvailable: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const [pendingTier, setPendingTier] = useState<SubscriptionTier | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -46,9 +46,17 @@ export function PlanPicker() {
     });
   }
 
+  const visiblePlans = growthAvailable ? PLANS : PLANS.filter((plan) => plan.tier === "starter");
+
   return (
     <div className="flex flex-col gap-4">
-      {PLANS.map((plan) => (
+      {!growthAvailable && (
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          Growth&apos;s POS integration currently supports Square and Clover, with more platforms
+          coming soon — so only Starter is available for now.
+        </p>
+      )}
+      {visiblePlans.map((plan) => (
         <div
           key={plan.tier}
           className="flex flex-col gap-3 rounded-2xl border border-zinc-200 p-4 dark:border-zinc-800"

@@ -6,8 +6,8 @@ import {
   updateBusinessName,
   updateKnowledgeBase,
   updateFinanceSnapshot,
+  updateBudget,
   uploadBusinessLogo,
-  signOut,
 } from "./actions";
 
 export function SettingsClient({
@@ -20,6 +20,9 @@ export function SettingsClient({
   burn: initialBurn,
   monthlyCogs: initialMonthlyCogs,
   monthlyLaborCost: initialMonthlyLaborCost,
+  budgetedRevenue: initialBudgetedRevenue,
+  budgetedCogs: initialBudgetedCogs,
+  budgetedLabor: initialBudgetedLabor,
   isPlatformAdmin,
 }: {
   businessName: string;
@@ -31,6 +34,9 @@ export function SettingsClient({
   burn: number;
   monthlyCogs: number | null;
   monthlyLaborCost: number | null;
+  budgetedRevenue: number | null;
+  budgetedCogs: number | null;
+  budgetedLabor: number | null;
   isPlatformAdmin: boolean;
 }) {
   const [businessName, setBusinessName] = useState(initialBusinessName);
@@ -108,6 +114,29 @@ export function SettingsClient({
       const result = await updateFinanceSnapshot({ cash, burn, monthlyCogs, monthlyLaborCost });
       if (result.error) setFinanceError(result.error);
       else setFinanceSaved(true);
+    });
+  }
+
+  const [budgetedRevenue, setBudgetedRevenue] = useState(
+    initialBudgetedRevenue !== null ? String(initialBudgetedRevenue) : ""
+  );
+  const [budgetedCogs, setBudgetedCogs] = useState(
+    initialBudgetedCogs !== null ? String(initialBudgetedCogs) : ""
+  );
+  const [budgetedLabor, setBudgetedLabor] = useState(
+    initialBudgetedLabor !== null ? String(initialBudgetedLabor) : ""
+  );
+  const [budgetError, setBudgetError] = useState<string | null>(null);
+  const [budgetSaved, setBudgetSaved] = useState(false);
+  const [isSavingBudget, startBudgetTransition] = useTransition();
+
+  function handleSaveBudget() {
+    setBudgetError(null);
+    setBudgetSaved(false);
+    startBudgetTransition(async () => {
+      const result = await updateBudget({ budgetedRevenue, budgetedCogs, budgetedLabor });
+      if (result.error) setBudgetError(result.error);
+      else setBudgetSaved(true);
     });
   }
 
@@ -210,7 +239,7 @@ export function SettingsClient({
           Starting finance snapshot
         </h2>
         <p className="text-xs text-zinc-500 dark:text-zinc-400">
-          Correct your initial numbers here. Ongoing revenue updates happen via Square
+          Correct your initial numbers here. Ongoing revenue updates happen via POS
           Integration or the Dashboard.
         </p>
         <div className="flex flex-col gap-1.5">
@@ -286,6 +315,65 @@ export function SettingsClient({
         </Button>
       </section>
 
+      <section className="flex flex-col gap-3 rounded-2xl border border-zinc-200 p-4 dark:border-zinc-800">
+        <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Monthly budget</h2>
+        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+          Optional targets for the month — set these to see Budget vs. Actual on the Dashboard.
+        </p>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            Budgeted revenue ($)
+          </label>
+          <input
+            type="number"
+            inputMode="decimal"
+            value={budgetedRevenue}
+            onChange={(e) => {
+              setBudgetedRevenue(e.target.value);
+              setBudgetSaved(false);
+            }}
+            placeholder="No budget set"
+            className={inputClass}
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            Budgeted COGS ($)
+          </label>
+          <input
+            type="number"
+            inputMode="decimal"
+            value={budgetedCogs}
+            onChange={(e) => {
+              setBudgetedCogs(e.target.value);
+              setBudgetSaved(false);
+            }}
+            placeholder="No budget set"
+            className={inputClass}
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            Budgeted labor ($)
+          </label>
+          <input
+            type="number"
+            inputMode="decimal"
+            value={budgetedLabor}
+            onChange={(e) => {
+              setBudgetedLabor(e.target.value);
+              setBudgetSaved(false);
+            }}
+            placeholder="No budget set"
+            className={inputClass}
+          />
+        </div>
+        {budgetError && <p className="text-sm text-red-600 dark:text-red-400">{budgetError}</p>}
+        <Button type="button" onClick={handleSaveBudget} disabled={isSavingBudget} className="self-start">
+          {isSavingBudget ? "Saving…" : budgetSaved ? "Saved ✓" : "Save Budget"}
+        </Button>
+      </section>
+
       {isPlatformAdmin && (
         <section className="flex flex-col gap-3 rounded-2xl border border-zinc-200 p-4 dark:border-zinc-800">
           <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Diagnostics</h2>
@@ -304,12 +392,6 @@ export function SettingsClient({
           </Button>
         </section>
       )}
-
-      <form action={signOut} className="mt-4 border-t border-zinc-200 pt-6 dark:border-zinc-800">
-        <Button type="submit" variant="secondary" className="w-full">
-          Log out
-        </Button>
-      </form>
     </div>
   );
 }

@@ -3,14 +3,16 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut } from "@/lib/auth-actions";
 
 const LINKS = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/morning-brief", label: "CEO Brief" },
   { href: "/vital-signs", label: "Vital Signs" },
   { href: "/decisions", label: "Decisions Log" },
+  { href: "/goals", label: "Goals" },
   { href: "/content-studio", label: "Content Studio" },
-  { href: "/square-integration", label: "Square Integration" },
+  { href: "/pos-integration", label: "POS Integration" },
   { href: "/settings", label: "Settings" },
 ];
 
@@ -122,6 +124,15 @@ export function AppNav({
               </Link>
             );
           })}
+
+          <form action={signOut} className="mt-2 border-t border-zinc-200 pt-2 dark:border-zinc-800">
+            <button
+              type="submit"
+              className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900"
+            >
+              Log out
+            </button>
+          </form>
         </nav>
       </aside>
     </>

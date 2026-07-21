@@ -1,6 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionState } from "@/lib/supabase/session";
@@ -57,11 +56,6 @@ export async function uploadBusinessLogo(formData: FormData): Promise<SettingsRe
   return { success: true };
 }
 
-export async function signOut() {
-  const supabase = await createClient();
-  await supabase.auth.signOut();
-  redirect("/login");
-}
 
 export type KnowledgeBaseInput = {
   overview: string;
@@ -159,5 +153,33 @@ export async function updateFinanceSnapshot(input: FinanceSnapshotInput): Promis
   revalidatePath("/settings");
   revalidatePath("/dashboard");
   revalidatePath("/morning-brief");
+  return { success: true };
+}
+
+export type BudgetInput = {
+  budgetedRevenue: string;
+  budgetedCogs: string;
+  budgetedLabor: string;
+};
+
+export async function updateBudget(input: BudgetInput): Promise<SettingsResult> {
+  const { businessId } = await getSessionState();
+  const id = businessId as string;
+  const supabase = await createClient();
+
+  const payload: FinanceDataInsert = {
+    business_id: id,
+    budgeted_revenue: toNullableNumber(input.budgetedRevenue),
+    budgeted_cogs: toNullableNumber(input.budgetedCogs),
+    budgeted_labor: toNullableNumber(input.budgetedLabor),
+    updated_at: new Date().toISOString(),
+  };
+
+  const { error } = await supabase.from("finance_data").upsert(payload);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/settings");
+  revalidatePath("/dashboard");
   return { success: true };
 }

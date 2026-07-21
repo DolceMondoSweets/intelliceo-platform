@@ -82,6 +82,9 @@ export interface Database {
           monthly_cogs: number | null;
           monthly_labor_cost: number | null;
           cogs_updated_at: string | null;
+          budgeted_revenue: number | null;
+          budgeted_cogs: number | null;
+          budgeted_labor: number | null;
           updated_at: string | null;
         };
         Insert: {
@@ -93,12 +96,46 @@ export interface Database {
           monthly_cogs?: number | null;
           monthly_labor_cost?: number | null;
           cogs_updated_at?: string | null;
+          budgeted_revenue?: number | null;
+          budgeted_cogs?: number | null;
+          budgeted_labor?: number | null;
           updated_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["finance_data"]["Insert"]>;
         Relationships: [
           {
             foreignKeyName: "finance_data_business_id_fkey";
+            columns: ["business_id"];
+            referencedRelation: "businesses";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      goals: {
+        Row: {
+          id: string;
+          business_id: string | null;
+          title: string;
+          target_metric: string | null;
+          target_value: number | null;
+          target_date: string | null;
+          status: string | null;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          business_id?: string | null;
+          title: string;
+          target_metric?: string | null;
+          target_value?: number | null;
+          target_date?: string | null;
+          status?: string | null;
+          created_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["goals"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "goals_business_id_fkey";
             columns: ["business_id"];
             referencedRelation: "businesses";
             referencedColumns: ["id"];
@@ -221,25 +258,29 @@ export interface Database {
           },
         ];
       };
-      square_credentials: {
+      pos_credentials: {
         Row: {
           business_id: string;
+          pos_type: string;
           access_token: string | null;
           location_id: string | null;
+          merchant_id: string | null;
           last_synced_at: string | null;
           updated_at: string | null;
         };
         Insert: {
           business_id: string;
+          pos_type?: string;
           access_token?: string | null;
           location_id?: string | null;
+          merchant_id?: string | null;
           last_synced_at?: string | null;
           updated_at?: string | null;
         };
-        Update: Partial<Database["public"]["Tables"]["square_credentials"]["Insert"]>;
+        Update: Partial<Database["public"]["Tables"]["pos_credentials"]["Insert"]>;
         Relationships: [
           {
-            foreignKeyName: "square_credentials_business_id_fkey";
+            foreignKeyName: "pos_credentials_business_id_fkey";
             columns: ["business_id"];
             referencedRelation: "businesses";
             referencedColumns: ["id"];

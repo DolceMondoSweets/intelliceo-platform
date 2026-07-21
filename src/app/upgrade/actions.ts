@@ -2,30 +2,29 @@
 
 import { redirect } from "next/navigation";
 import { getSessionState } from "@/lib/supabase/session";
-import { getStripeClient } from "@/lib/stripe";
-import { ensureStripeCustomer } from "@/lib/stripe-customer";
-import { getBaseUrl } from "@/lib/url";
+import {
+  changeSubscriptionTier,
+  openBillingPortal as openBillingPortalShared,
+  sanitizeReturnTo,
+  type BillingPortalResult,
+} from "@/lib/subscription-change";
 
-export type BillingPortalResult = { error?: string };
+export type UpgradeResult = { error?: string };
 
-// Growth is a plan CHANGE for an already-paying customer, not a fresh
-// signup — Stripe's Billing Portal handles proration and payment method
-// updates for that correctly, so this hands off to it rather than building
-// custom upgrade/downgrade logic.
-export async function openBillingPortal(): Promise<BillingPortalResult> {
+// Upgrades an already-paying Starter subscriber to Growth by updating their
+// EXISTING Stripe subscription in place (proration handled by Stripe) —
+// not a new Checkout Session, since they already have a payment method on
+// file. Redirects back to whatever Growth feature sent them here.
+export async function upgradeToGrowth(returnTo?: string): Promise<UpgradeResult> {
   const { user, businessId } = await getSessionState();
   if (!user || !businessId) return { error: "Your session expired — please log in again." };
 
-  const { customerId, error: customerError } = await ensureStripeCustomer(businessId, user.email);
-  if (customerError || !customerId) return { error: customerError ?? "Could not open billing." };
+  const result = await changeSubscriptionTier(businessId, "growth");
+  if (result.error) return result;
 
-  const baseUrl = await getBaseUrl();
-  const stripe = getStripeClient();
+  redirect(sanitizeReturnTo(returnTo, "/dashboard"));
+}
 
-  const session = await stripe.billingPortal.sessions.create({
-    customer: customerId,
-    return_url: `${baseUrl}/upgrade`,
-  });
-
-  redirect(session.url);
+export async function openBillingPortal(): Promise<BillingPortalResult> {
+  return openBillingPortalShared("/upgrade");
 }

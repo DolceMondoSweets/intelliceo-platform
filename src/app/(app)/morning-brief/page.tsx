@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getSessionState } from "@/lib/supabase/session";
-import { calculateRunwayMonths, formatRunwayMonths } from "@/lib/business-context";
+import { calculateRunwayMonths, formatRunwayMonths } from "@/lib/financial-formulas";
 import { MorningBriefClient } from "./morning-brief-client";
 
 export default async function MorningBriefPage() {

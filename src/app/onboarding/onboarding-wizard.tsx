@@ -4,17 +4,25 @@ import { useState, useTransition } from "react";
 import { completeOnboarding, type OnboardingInput } from "./actions";
 import { Button, inputClass } from "@/components/ui";
 
-const STEPS = ["business", "overview", "products", "priorities", "finance"] as const;
+const STEPS = ["business", "overview", "products", "priorities", "pos", "finance"] as const;
 
 const initialValues: OnboardingInput = {
   businessName: "",
   overview: "",
   products: "",
   priorities: "",
+  posSystem: "",
   cash: "",
   burn: "",
   revenueMtd: "",
 };
+
+const POS_OPTIONS: { value: string; label: string }[] = [
+  { value: "square", label: "Square" },
+  { value: "clover", label: "Clover" },
+  { value: "toast", label: "Toast" },
+  { value: "other_none", label: "Other / None" },
+];
 
 export function OnboardingWizard() {
   const [stepIndex, setStepIndex] = useState(0);
@@ -123,6 +131,30 @@ export function OnboardingWizard() {
             placeholder="Improve weekday lunch traffic and hire a second baker."
             className={inputClass}
           />
+        </Field>
+      )}
+
+      {step === "pos" && (
+        <Field
+          label="Which POS system do you use?"
+          hint="Growth's POS integration currently supports Square and Clover, with more platforms coming soon."
+        >
+          <div className="flex flex-col gap-2">
+            {POS_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => update("posSystem", option.value)}
+                className={`rounded-xl border px-4 py-3 text-left text-base transition-colors ${
+                  values.posSystem === option.value
+                    ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-50 dark:bg-zinc-50 dark:text-zinc-900"
+                    : "border-zinc-300 text-zinc-900 dark:border-zinc-700 dark:text-zinc-50"
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
         </Field>
       )}
 
