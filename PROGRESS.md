@@ -1,6 +1,6 @@
 # IntelliCEO — Progress Status
 
-_Last updated: 2026-07-27. Written to let a fresh session pick up with full context after a context-limit reset. This update was written by directly re-verifying the current state of the repo, live database, and git history — some of the work described below (the sections marked accordingly) happened outside this session's own visible conversation history, so it's documented from ground truth (file contents, git log, live queries) rather than from memory of building it._
+_Last updated: 2026-07-27 (later same day). Written to let a fresh session pick up with full context after a context-limit reset. This update was written by directly re-verifying the current state of the repo, live database, and git history — some of the work described below (the sections marked accordingly) happened outside this session's own visible conversation history, so it's documented from ground truth (file contents, git log, live queries) rather than from memory of building it._
 
 ## What this is
 
@@ -12,7 +12,7 @@ The legacy Streamlit source (`atlas_dashboard.py` + 13 knowledge-base markdown f
 
 - Next.js 16.2.10 (App Router, TypeScript, Tailwind v4), mobile-first PWA (manifest, service worker — production-only registration, no longer caches `/` since it's a pure auth-redirect route, not static content)
 - Supabase (Postgres + Auth + RLS + Storage + **Vault**, used for encrypting POS access tokens at rest). Project ref `wiizwguxbnpxhzjekzvm`
-- Stripe (subscriptions, Checkout, Billing Portal, webhooks) — **test mode locally, entirely absent from production** (no Stripe env vars set on Vercel at all as of 2026-07-27), live-mode setup in progress — see the "what's left before a pilot" list at the bottom
+- Stripe (subscriptions, Checkout, Billing Portal, webhooks) — **test mode locally, live mode fully wired in production as of 2026-07-27 evening** (correct account verified, prices/coupon verified, webhook registered and reachable) — see the Stripe live-mode section below
 - `@anthropic-ai/sdk` for Claude-backed features (model: `claude-sonnet-5`) — the assistant persona is "IntelliCEO" throughout; a prior "Atlas" naming (leftover from the reference app this replaces) has been fully removed, confirmed zero remaining references anywhere in the repo
 - `@sentry/nextjs` for error tracking — confirmed receiving real events locally; DSN vars only added to production 2026-07-27, not yet independently confirmed receiving real prod events
 - A marketing/public site now exists (`src/app/(marketing)/`) alongside the product app — home page, Security page, help center, contact form with email sending (`src/lib/email.ts`, `contact@intelliceo.com`, live-tested working 2026-07-27). Committed in `0452060`.
@@ -91,11 +91,13 @@ The original admin RLS policies checked admin status via a subquery directly ins
 9. **A service worker that caches a pure redirect route can freeze stale auth-routing decisions** — only cache genuinely static content.
 10. **Migration files that touch encryption/secrets should say plainly whether they were actually run** — `migration_pos_credentials_vault.sql`'s own header claims it wasn't run "from this session," but a live query confirms it has been, just not by this particular assistant run. Don't trust a migration file's self-description over an actual live check when the two might refer to different sessions.
 11. This specific automated browser-testing tool has shown recurring artifacts in past sessions (stale cached CSS chunks, stuck Suspense reveals) that turned out to be tooling issues, not app bugs — always verify via direct content extraction or a raw `curl` before concluding something is actually broken.
+12. **Turbopack has shown at least one JSX whitespace-collapsing quirk** — `<span>Label.</span> Rest of text` on byte-identical source patterns rendered correctly in some spots and silently dropped the space in others in the compiled/served HTML. Use explicit `{" "}` after inline elements followed by text rather than relying on implicit JSX whitespace, especially in prose-heavy content. Verify via raw HTML/RSC payload (`curl` + grep), not the browser text-extraction tool, which has its own separate whitespace artifacts (see lesson 11).
+13. **Running `npm run build` while `next dev` is still running on the same directory corrupts the dev server** (`Internal Server Error` on the next request) — this is lesson 6 biting mid-session, not just at session start. Stop the dev server, `rm -rf .next`, and restart it after any one-off production build.
 
 ## Environment / credentials status
 
-- `.env.local`: Supabase URL + publishable key + `SUPABASE_SERVICE_ROLE_KEY` (needed for the Stripe webhook), `ANTHROPIC_API_KEY`, Sentry DSN vars, Stripe test-mode keys/price IDs/webhook secret (from local `stripe listen`) — all set, all test mode.
-- Stripe CLI installed locally, authenticated to the user's Stripe account (`pathoflifeacademy.org`, `acct_1Kv6TIKopQhwQMnN`) — confirm this is the intended account before going live.
+- `.env.local`: Supabase URL + publishable key + `SUPABASE_SERVICE_ROLE_KEY` (needed for the Stripe webhook), `ANTHROPIC_API_KEY`, Sentry DSN vars, Stripe test-mode keys/price IDs/webhook secret (from local `stripe listen`), `RESEND_API_KEY` — all set. Local dev intentionally stays on Stripe **test-mode** keys even after production went live-mode, so local testing never risks a real charge.
+- The local Stripe CLI's `stripe listen` session is still authenticated to `pathoflifeacademy.org` (`acct_1Kv6TIKopQhwQMnN`) for test-mode webhook forwarding during local dev — **this is a different, unrelated account from the live IntelliCEO Stripe account below**, confirmed intentionally separate, not a mix-up.
 - `contact@intelliceo.com` is used as the outbound sender for the marketing site's contact form (`src/lib/email.ts`). `RESEND_API_KEY` (sending-only restricted key) is set in both `.env.local` and Vercel production as of 2026-07-27 — a real send through the live form succeeded and the user confirmed it arrived in `help@intelliceo.com` the same day. Fully working, closed.
 
 ## Deployment verification (done 2026-07-27) — live, but production env vars are far from complete
@@ -131,6 +133,48 @@ Added to `.env.local` (local dev now matches prod for the first time on this var
 
 **Delivery confirmed by the user 2026-07-27** — the test message landed in `help@intelliceo.com`. Contact form is fully working end-to-end in production, not just accepted at the API level.
 
+## Stripe live-mode switch — done same day, 2026-07-27
+
+User created live Products/Prices/coupon/webhook directly in the Stripe dashboard (Workbench UI — note it now calls webhook endpoints "event destinations," reached via **Webhooks → Add destination → Webhook endpoint**, not "Add endpoint" as older Stripe docs describe) and handed over the resulting credentials. Before wiring anything in, independently verified via the Stripe API (not just trusting the values):
+
+- **Account identity** — `GET /v1/account` with the live secret key returned `acct_1TvAOb7nEX2itCJG`, business name **"IntelliCEO"**, `farellduclair@gmail.com`, `charges_enabled: true`. Confirmed **not** the `pathoflifeacademy.org` account the local Stripe CLI happens to be authenticated to (see Environment section above) — that was a real risk worth checking given how easy it'd be to grab the wrong account's keys.
+- **Prices** — `price_1TxuzO7nEX2itCJGq7WyPHUk` = **$59.00/mo USD recurring** (Starter), `price_1TxuzL7nEX2itCJGduT5wQiU` = **$89.00/mo USD recurring** (Growth). Both `livemode: true`, `active: true`. Exact match.
+- **PILOT25 coupon** — fetched the underlying coupon object (`GET /v1/coupons/PILOT25`): `percent_off: 25`, `duration: "once"` (first month only), `livemode: true`. Matches the intended pilot offer exactly.
+- **Webhook destination** — created at `https://intelliceo.com/api/stripe/webhook`, API version `2026-06-24.dahlia` (matches `src/lib/stripe.ts:9` exactly), listening to the 3 events the handler actually switches on (`checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, per `src/app/api/stripe/webhook/route.ts:36-54`). This Workbench version has no "send test event" feature (destination's "⋯" menu only has Disable/Roll Secrets/Delete) — so a real signed-event round-trip couldn't be tested short of an actual live transaction. What *was* confirmed: the route is live and reachable in production (`curl` returns `405 Method Not Allowed` on a bare GET — correct, since it's a POST-only handler).
+
+**All 5 Stripe env vars added to Vercel production** (`vercel env add <NAME> production`, values piped from a variable so secrets never appeared in a command string) and deployed together in one `vercel --prod`, per explicit instruction not to deploy until the webhook was registered:
+- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` = `pk_live_...`
+- `STRIPE_SECRET_KEY` = `sk_live_...`
+- `STRIPE_PRICE_STARTER` = `price_1TxuzO7nEX2itCJGq7WyPHUk`
+- `STRIPE_PRICE_GROWTH` = `price_1TxuzL7nEX2itCJGduT5wQiU`
+- `STRIPE_WEBHOOK_SECRET` = `whsec_...`
+
+**Only unverified piece:** whether the webhook actually processes a real signed event end-to-end (200 response, `stripe_webhook_events` idempotency row written, subscription status updated correctly) — this will resolve itself on the first real pilot signup. Worth checking Stripe's **Event deliveries** tab (on the destination's detail page) or Sentry right after that first signup.
+
+## Clover audit — confirmed nothing was missed alongside the Stripe switch (2026-07-27)
+
+User asked to confirm Clover was switched from sandbox to production alongside Stripe, per an earlier decision to do both together. Checked directly against the live database (via `SUPABASE_SERVICE_ROLE_KEY` against the PostgREST REST API) rather than assuming:
+
+- `CLOVER_API_BASE_URL` — confirmed still unset in Vercel production, which means it already defaults to the real production host (`https://api.clover.com`) per `src/app/(app)/pos-integration/actions.ts:161`. Nothing needed here — this was already correct going back to whenever it was first left unset.
+- **Only one business in the entire database has Clover configured at all** (`merchant_id: W3SMVM0KSDEE1`), and it belongs to **"Stripe Test Bakery (Renamed)"** — a test account created 2026-07-20 during the earlier Stripe billing test-clock walkthrough, not a real pilot business.
+
+**Conclusion: there is no real pilot business using Clover yet for a sandbox→production credential swap to even apply to.** Nothing was missed — this becomes real work only once an actual pilot business connects Clover, at which point they enter their own real production access token via `/pos-integration` and it hits the production API by default already.
+
+## Privacy Policy and Terms of Service pages — built and deployed 2026-07-27
+
+`/privacy` and `/terms` were **linked from the footer on every marketing page but didn't exist** — confirmed via `curl` returning a real `404` in production, not just placeholder content. This was flagged as a blocker before any real paying pilot business, given Stripe Checkout would be collecting payment with no accessible legal terms.
+
+Built from user-supplied `Privacy_Policy.md` / `Terms_of_Service.md` (11 and 16 sections respectively), with `[DATE]` replaced by the actual publish date (July 27, 2026):
+- `src/app/(marketing)/privacy/page.tsx` + `src/components/marketing/sections/legal/PrivacyPolicyContent.tsx`
+- `src/app/(marketing)/terms/page.tsx` + `src/components/marketing/sections/legal/TermsOfServiceContent.tsx`
+- Shared `src/components/marketing/sections/legal/LegalLayout.tsx` (`LegalLayout` + `LegalSection`) — deliberately a single continuous long-form article (one `Reveal` on the header only) rather than the stacked-marketing-section pattern used on Security/About, per "readable long-form typography over decoration." Uses the same design tokens as the rest of the site (Manrope font, `mkt-text-primary`/`secondary`/`muted` colors, `pageHeadline` typography scale, `ProseWidth`/`Container`).
+
+**Found and fixed a real Turbopack JSX whitespace bug while building this:** several `<span>Label.</span> Rest of sentence` constructs silently lost the space between the closing tag and the following text in the compiled/served HTML, confirmed via raw HTML/RSC-payload inspection (not the browser text-extraction tool, which has its own known artifacts per lesson #11 below) — byte-identical source patterns rendered correctly in some spots and incorrectly in others, so it wasn't a typo. Fixed throughout both files by using explicit `{" "}` instead of relying on implicit JSX whitespace adjacency.
+
+Verified: `tsc --noEmit` clean, production build clean (`○ /privacy` and `○ /terms` both statically prerendered), visually checked in a local dev server (correct headings/links/lists, computed styles match the site's Manrope/color-token system, no console errors), then deployed to production — `curl` now returns `200` for both, footer links resolve instead of 404ing.
+
+**New lesson learned:** running a separate one-off `npm run build` while a `next dev` server is still running on the same directory corrupts the dev server's `.next` state (`Internal Server Error` on next request) — confirms lesson #6 below applies even mid-session, not just at session start; the dev server needs a full stop + `rm -rf .next` + restart afterward, not just a page refresh.
+
 ## Git status — check this carefully before assuming anything is pushed
 
 As of this writing, `origin/main` and local `main` are identical through commit `0452060` ("Add marketing site, Vault-encrypted POS credentials migration") — working tree is clean, nothing outstanding. That commit landed everything the previous update flagged as uncommitted: the entire marketing site, `migration_pos_credentials_vault.sql`, the two brief docs, and the accumulated modifications to `.env.local.example`/`.gitignore`/`intelliceo_schema.sql`/`package.json`/`package-lock.json`.
@@ -141,9 +185,10 @@ Still run `git status`/`git diff` at the start of a fresh session to confirm —
 
 1. ~~Nothing is deployed via a verifiable-from-this-repo path~~ — **confirmed live 2026-07-27**, both marketing site and product app serving correctly, auth gating works. See Deployment verification section above.
 2. ~~Production missing most env vars~~ — **`SUPABASE_SERVICE_ROLE_KEY`, `ANTHROPIC_API_KEY`, `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_DSN` added and redeployed 2026-07-27.** Chat/CEO Brief/Content Studio should now work in production — not yet confirmed end-to-end by an actual logged-in test (needs the user, since creating/signing into an account isn't done on their behalf). Sentry should now be receiving prod events — not yet confirmed by checking the Sentry dashboard after a real triggered error.
-3. **Stripe needs to go from nonexistent to live in production** — not a test→live swap, since prod currently has no Stripe env vars at all. Needs, together: live Products/Prices matching Starter $59/Growth $89 exactly, live API keys, a real registered webhook endpoint (replacing the local `stripe listen` tunnel), and `PILOT25` recreated in live mode. **In progress** — user is creating the live Products/Prices/coupon/webhook in the Stripe dashboard directly, will hand back the resulting keys/IDs to wire in.
-4. **Clover production switch is a per-business data task, not a config change** — `CLOVER_API_BASE_URL` is already unset in prod, which defaults to the real production Clover host. Each pilot business just needs to paste a real production Clover access token + merchant ID into `/pos-integration` in place of any sandbox one used for testing.
+3. ~~Stripe live-mode switch~~ — **done 2026-07-27**: correct account verified, live Prices ($59/$89) and `PILOT25` verified via the Stripe API, webhook destination registered and reachable, all 5 env vars deployed to production together. See Stripe live-mode section above. **Only unverified piece:** an actual real signed event hasn't round-tripped yet (no test-send feature in this Stripe Workbench version) — will confirm itself on the first real pilot signup; worth checking Stripe's Event deliveries tab or Sentry right after.
+4. ~~Clover production switch~~ — **audited 2026-07-27, confirmed nothing was missed.** `CLOVER_API_BASE_URL` already defaults to production when unset (already correct). The only Clover-configured business in the database is a test account, not a real pilot business — so there's no live sandbox credential sitting in production to swap. Becomes real work only when an actual pilot business connects Clover.
 5. ~~Contact form broken~~ — **`RESEND_API_KEY` obtained, added to prod, redeployed, and live-tested successfully 2026-07-27, with inbox delivery to `help@intelliceo.com` confirmed by the user the same day.** Fully working, closed.
 6. **Email deliverability for Supabase Auth** (signup confirmation, password reset) — still unconfirmed.
+7. ~~`/privacy` and `/terms` didn't exist (404 from the footer links)~~ — **built and deployed 2026-07-27** from user-supplied source docs, same design system as the rest of the site. See Privacy/Terms section above.
 
 Lower priority: no automated test suite, no rate limiting on Chat's Claude calls, a handful of test businesses/accounts sitting in the database (harmless, RLS-isolated).
