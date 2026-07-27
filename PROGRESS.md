@@ -96,7 +96,7 @@ The original admin RLS policies checked admin status via a subquery directly ins
 
 - `.env.local`: Supabase URL + publishable key + `SUPABASE_SERVICE_ROLE_KEY` (needed for the Stripe webhook), `ANTHROPIC_API_KEY`, Sentry DSN vars, Stripe test-mode keys/price IDs/webhook secret (from local `stripe listen`) — all set, all test mode.
 - Stripe CLI installed locally, authenticated to the user's Stripe account (`pathoflifeacademy.org`, `acct_1Kv6TIKopQhwQMnN`) — confirm this is the intended account before going live.
-- `contact@intelliceo.com` is used as the outbound sender for the marketing site's contact form (`src/lib/email.ts`). `RESEND_API_KEY` (sending-only restricted key) is now set in both `.env.local` and Vercel production as of 2026-07-27, and a real send through the live form succeeded at the API level — inbox delivery to `help@intelliceo.com` still needs the user's own confirmation.
+- `contact@intelliceo.com` is used as the outbound sender for the marketing site's contact form (`src/lib/email.ts`). `RESEND_API_KEY` (sending-only restricted key) is set in both `.env.local` and Vercel production as of 2026-07-27 — a real send through the live form succeeded and the user confirmed it arrived in `help@intelliceo.com` the same day. Fully working, closed.
 
 ## Deployment verification (done 2026-07-27) — live, but production env vars are far from complete
 
@@ -129,7 +129,7 @@ Added to `.env.local` (local dev now matches prod for the first time on this var
 
 **Live-tested against the real production form afterward:** submitted `/contact` with category "Beta Support" (routes to `help@intelliceo.com` per `src/content/contact.ts:15`), name "Farell Duclair (Resend fix verification)", reply-to `farellduclair@gmail.com`, a message explicitly asking the reader to confirm delivery. Confirmed via direct DOM inspection (not just visual) that the form's success state rendered — `"Message sent."` — which only happens when `submitContactForm` gets no error back from `resend.emails.send()`. A fresh POST to `/contact` was visible in the network log at the time of this submission, confirming it wasn't a stale/cached result.
 
-**Important caveat:** "sent successfully" from the app means Resend's API accepted the send without an error — it does **not** guarantee actual inbox delivery (could still bounce or land in spam depending on domain/DNS/SPF/DKIM setup). **The user needs to independently check `help@intelliceo.com` to confirm the message actually arrived** before considering this fully closed.
+**Delivery confirmed by the user 2026-07-27** — the test message landed in `help@intelliceo.com`. Contact form is fully working end-to-end in production, not just accepted at the API level.
 
 ## Git status — check this carefully before assuming anything is pushed
 
@@ -143,7 +143,7 @@ Still run `git status`/`git diff` at the start of a fresh session to confirm —
 2. ~~Production missing most env vars~~ — **`SUPABASE_SERVICE_ROLE_KEY`, `ANTHROPIC_API_KEY`, `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_DSN` added and redeployed 2026-07-27.** Chat/CEO Brief/Content Studio should now work in production — not yet confirmed end-to-end by an actual logged-in test (needs the user, since creating/signing into an account isn't done on their behalf). Sentry should now be receiving prod events — not yet confirmed by checking the Sentry dashboard after a real triggered error.
 3. **Stripe needs to go from nonexistent to live in production** — not a test→live swap, since prod currently has no Stripe env vars at all. Needs, together: live Products/Prices matching Starter $59/Growth $89 exactly, live API keys, a real registered webhook endpoint (replacing the local `stripe listen` tunnel), and `PILOT25` recreated in live mode. **In progress** — user is creating the live Products/Prices/coupon/webhook in the Stripe dashboard directly, will hand back the resulting keys/IDs to wire in.
 4. **Clover production switch is a per-business data task, not a config change** — `CLOVER_API_BASE_URL` is already unset in prod, which defaults to the real production Clover host. Each pilot business just needs to paste a real production Clover access token + merchant ID into `/pos-integration` in place of any sandbox one used for testing.
-5. ~~Contact form broken~~ — **`RESEND_API_KEY` obtained, added to prod, redeployed, and live-tested successfully 2026-07-27** (see Deployment verification section above). App-level confirmation only — **the user still needs to check `help@intelliceo.com` directly to confirm the test message actually arrived**, since a successful API response doesn't guarantee inbox delivery.
+5. ~~Contact form broken~~ — **`RESEND_API_KEY` obtained, added to prod, redeployed, and live-tested successfully 2026-07-27, with inbox delivery to `help@intelliceo.com` confirmed by the user the same day.** Fully working, closed.
 6. **Email deliverability for Supabase Auth** (signup confirmation, password reset) — still unconfirmed.
 
 Lower priority: no automated test suite, no rate limiting on Chat's Claude calls, a handful of test businesses/accounts sitting in the database (harmless, RLS-isolated).
