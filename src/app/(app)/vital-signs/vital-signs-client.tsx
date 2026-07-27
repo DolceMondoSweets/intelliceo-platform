@@ -33,7 +33,7 @@ export function VitalSignsClient() {
   return (
     <div className="flex flex-col gap-4">
       <Button type="button" onClick={handleGenerate} disabled={isPending} className="self-start">
-        {isPending ? "Thinking through today…" : "Get Atlas's Answers"}
+        {isPending ? "Thinking through today…" : "Get Your Answers"}
       </Button>
 
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}

@@ -27,7 +27,7 @@ export async function getVitalSigns(): Promise<VitalSignsResult> {
   ]);
 
   const system =
-    "You are Atlas, an AI operating system for a small business. Never hallucinate facts about " +
+    "You are IntelliCEO, an AI operating system for a small business. Never hallucinate facts about " +
     "the business — use only the business context and finance snapshot provided. Where the " +
     "answer depends on facts not in your context, say so plainly instead of guessing. Default " +
     "to brutal honesty and execution focus.\n\n" +
@@ -60,7 +60,7 @@ export async function getVitalSigns(): Promise<VitalSignsResult> {
     userMessage,
     3000
   );
-  if (!result) return { error: "Atlas returned a response that couldn't be read. Try again." };
+  if (!result) return { error: "IntelliCEO returned a response that couldn't be read. Try again." };
 
   return { answers: result.answers };
 }

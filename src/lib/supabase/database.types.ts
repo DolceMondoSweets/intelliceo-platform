@@ -262,7 +262,7 @@ export interface Database {
         Row: {
           business_id: string;
           pos_type: string;
-          access_token: string | null;
+          access_token_secret_id: string | null;
           location_id: string | null;
           merchant_id: string | null;
           last_synced_at: string | null;
@@ -271,7 +271,7 @@ export interface Database {
         Insert: {
           business_id: string;
           pos_type?: string;
-          access_token?: string | null;
+          access_token_secret_id?: string | null;
           location_id?: string | null;
           merchant_id?: string | null;
           last_synced_at?: string | null;
@@ -374,6 +374,26 @@ export interface Database {
       set_business_name: {
         Args: { p_name: string };
         Returns: undefined;
+      };
+      // Vault-backed pos_credentials access — see intelliceo_schema.sql for
+      // the full definitions and migration_pos_credentials_vault.sql for
+      // the migration that creates them.
+      has_pos_access_token: {
+        Args: Record<PropertyKey, never>;
+        Returns: boolean;
+      };
+      set_pos_access_token: {
+        Args: {
+          p_pos_type: string;
+          p_access_token: string | null;
+          p_location_id?: string | null;
+          p_merchant_id?: string | null;
+        };
+        Returns: undefined;
+      };
+      get_pos_access_token: {
+        Args: Record<PropertyKey, never>;
+        Returns: string | null;
       };
     };
     Enums: Record<string, never>;

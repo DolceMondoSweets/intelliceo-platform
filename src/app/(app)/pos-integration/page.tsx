@@ -11,13 +11,16 @@ export default async function PosIntegrationPage() {
   if (!isGrowthTier(subscriptionTier)) redirect("/upgrade?from=/pos-integration");
   const supabase = await createClient();
 
-  const [{ data: creds }, { data: finance }] = await Promise.all([
+  const [{ data: creds }, { data: finance }, { data: hasToken }] = await Promise.all([
     supabase
       .from("pos_credentials")
-      .select("pos_type, access_token, location_id, merchant_id")
+      .select("pos_type, location_id, merchant_id")
       .eq("business_id", businessId)
       .maybeSingle(),
     supabase.from("finance_data").select("revenue_mtd").eq("business_id", businessId).maybeSingle(),
+    // Presence-only check — never decrypts the token itself, per
+    // has_pos_access_token()'s definition in intelliceo_schema.sql.
+    supabase.rpc("has_pos_access_token"),
   ]);
 
   return (
@@ -32,7 +35,7 @@ export default async function PosIntegrationPage() {
 
       <PosIntegrationClient
         currentPosType={(creds?.pos_type as PosType | undefined) ?? null}
-        hasToken={!!creds?.access_token}
+        hasToken={!!hasToken}
         locationId={creds?.location_id ?? ""}
         merchantId={creds?.merchant_id ?? ""}
         currentRevenueMtd={finance?.revenue_mtd ?? 0}

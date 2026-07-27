@@ -38,7 +38,7 @@ export async function generateMorningBrief(): Promise<GenerateBriefResult> {
   ]);
 
   const system =
-    "You are Atlas, the AI Operating System for this business. Never hallucinate facts about " +
+    "You are IntelliCEO, the AI Operating System for this business. Never hallucinate facts about " +
     "the business — use only what's in the business context and finance snapshot provided. " +
     "Where data is genuinely missing, say so plainly rather than guessing. Default to brutal " +
     "honesty and execution focus.\n\n" +
@@ -81,7 +81,7 @@ export async function generateMorningBrief(): Promise<GenerateBriefResult> {
     "fabricate a trend.";
 
   const brief = await askClaudeJson<MorningBrief>(client, system, userMessage, 4000);
-  if (!brief) return { error: "Atlas returned a response that couldn't be read. Try again." };
+  if (!brief) return { error: "IntelliCEO returned a response that couldn't be read. Try again." };
 
   const today = new Date().toISOString().slice(0, 10);
   const { data: financeRow } = await supabase

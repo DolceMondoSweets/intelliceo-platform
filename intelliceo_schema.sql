@@ -136,13 +136,20 @@ create table knowledge_base_entries (
 -- access_token + location_id; Clover uses access_token (its API token) +
 -- merchant_id. The unused fields for whichever platform isn't active just
 -- stay null.
--- NOTE: for production, use Supabase Vault or similar to encrypt access_token
--- at rest rather than storing it as plain text, even with RLS in place.
+--
+-- access_token is never stored in plain text. access_token_secret_id points
+-- at an encrypted Supabase Vault secret (vault.secrets) holding the real
+-- token; the token itself is only ever readable via the get_pos_access_token()
+-- SECURITY DEFINER RPC below, which decrypts it server-side for the caller's
+-- own business only. Reading this table directly (including as a platform
+-- admin, per the RLS policy further down) exposes only the secret's opaque
+-- UUID, never the token value.
+create extension if not exists supabase_vault;
 
 create table pos_credentials (
     business_id uuid primary key references businesses(id) on delete cascade,
     pos_type text not null default 'square',  -- 'square' | 'clover'
-    access_token text,
+    access_token_secret_id uuid references vault.secrets(id),
     location_id text,   -- Square only
     merchant_id text,   -- Clover only
     last_synced_at timestamptz,  -- set only when a revenue pull actually completes
@@ -392,6 +399,117 @@ end;
 $$;
 
 grant execute on function public.set_business_name(text) to authenticated;
+
+-- ═══════════════════════════════════════════════════════════════════════
+-- POS CREDENTIALS — Vault-backed access token storage. All three functions
+-- derive the caller's business_id from auth.uid() server-side, same as
+-- set_business_name/set_business_logo_url above — never accepted as a
+-- parameter, so there's no way to pass another business's id.
+-- ═══════════════════════════════════════════════════════════════════════
+
+-- Presence check only — never decrypts anything. Used by the "leave blank
+-- to keep your saved token" UX and to show whether a token is on file.
+create or replace function public.has_pos_access_token()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select access_token_secret_id is not null
+  from pos_credentials
+  where business_id = (select business_id from profiles where id = auth.uid());
+$$;
+
+grant execute on function public.has_pos_access_token() to authenticated;
+
+-- Creates or rotates the Vault secret and upserts the row. Pass
+-- p_access_token as null to keep the existing token and only update
+-- pos_type/location_id/merchant_id (e.g. editing a Location ID in place).
+create or replace function public.set_pos_access_token(
+  p_pos_type text,
+  p_access_token text,
+  p_location_id text default null,
+  p_merchant_id text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  caller_business_id uuid;
+  existing_secret_id uuid;
+  new_secret_id uuid;
+begin
+  select business_id into caller_business_id from profiles where id = auth.uid();
+  if caller_business_id is null then
+    raise exception 'No business associated with this account';
+  end if;
+
+  select access_token_secret_id into existing_secret_id
+  from pos_credentials where business_id = caller_business_id;
+
+  if p_access_token is not null then
+    if existing_secret_id is not null then
+      perform vault.update_secret(existing_secret_id, p_access_token);
+      new_secret_id := existing_secret_id;
+    else
+      new_secret_id := vault.create_secret(
+        p_access_token,
+        'pos_access_token_' || caller_business_id::text,
+        'POS access token for business ' || caller_business_id::text
+      );
+    end if;
+  else
+    new_secret_id := existing_secret_id;
+  end if;
+
+  insert into pos_credentials (business_id, pos_type, access_token_secret_id, location_id, merchant_id, updated_at)
+  values (caller_business_id, p_pos_type, new_secret_id, p_location_id, p_merchant_id, now())
+  on conflict (business_id) do update set
+    pos_type = excluded.pos_type,
+    access_token_secret_id = excluded.access_token_secret_id,
+    location_id = excluded.location_id,
+    merchant_id = excluded.merchant_id,
+    updated_at = excluded.updated_at;
+end;
+$$;
+
+grant execute on function public.set_pos_access_token(text, text, text, text) to authenticated;
+
+-- Decrypts and returns the caller's own token — the only place the
+-- plaintext value ever exists again, and only in-memory, server-side, for
+-- the immediate Square/Clover API call. Never exposed to the browser.
+create or replace function public.get_pos_access_token()
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  caller_business_id uuid;
+  secret_id uuid;
+  token text;
+begin
+  select business_id into caller_business_id from profiles where id = auth.uid();
+  if caller_business_id is null then
+    return null;
+  end if;
+
+  select access_token_secret_id into secret_id
+  from pos_credentials where business_id = caller_business_id;
+
+  if secret_id is null then
+    return null;
+  end if;
+
+  select decrypted_secret into token from vault.decrypted_secrets where id = secret_id;
+  return token;
+end;
+$$;
+
+grant execute on function public.get_pos_access_token() to authenticated;
 
 -- ═══════════════════════════════════════════════════════════════════════
 -- PLATFORM ADMIN — internal-only cross-tenant visibility, gated by

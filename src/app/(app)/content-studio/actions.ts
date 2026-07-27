@@ -20,7 +20,7 @@ export type GenerateDraftResult = { content?: string; error?: string };
 
 export async function generateDraft(input: GenerateDraftInput): Promise<GenerateDraftResult> {
   if (!input.topic.trim()) {
-    return { error: "Tell Atlas what this content should be about first." };
+    return { error: "Tell IntelliCEO what this content should be about first." };
   }
 
   const client = getAnthropicClient();
@@ -33,7 +33,7 @@ export async function generateDraft(input: GenerateDraftInput): Promise<Generate
   const kbContext = await getKbContext(supabase, businessId as string);
 
   const system =
-    "You are Atlas's marketing content assistant. Use ONLY the business context provided for " +
+    "You are IntelliCEO's marketing content assistant. Use ONLY the business context provided for " +
     "facts about products, channels, pricing, and priorities — never invent product names, " +
     "prices, or claims not grounded in that context. Match a warm, premium brand voice " +
     "appropriate to a small but ambitious business. Output ONLY the ready-to-use copy itself — " +
@@ -49,7 +49,7 @@ export async function generateDraft(input: GenerateDraftInput): Promise<Generate
     "Write the content now.";
 
   const draft = await askClaude(client, system, userMessage, 1500);
-  if (!draft) return { error: "Atlas didn't return any content. Try again." };
+  if (!draft) return { error: "IntelliCEO didn't return any content. Try again." };
 
   return { content: draft };
 }

@@ -10,6 +10,56 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  /* Same reasoning as --font-sans above: a token whose value references
+     another runtime CSS variable (next/font's injected --font-manrope)
+     needs @theme *inline* — a plain @theme block doesn't resolve it. */
+  --font-marketing: var(--font-manrope), "Inter", Arial, sans-serif;
+}
+
+/*
+ * IntelliCEO marketing site design tokens (Website Master Design System &
+ * Build Brief). Namespaced under "brand-*" / "mkt-*" so these coexist with
+ * the existing app's plain Tailwind zinc-based styling without collision —
+ * the product app itself is intentionally left untouched by this system.
+ */
+@theme {
+  --color-brand-teal: #004d59;
+  --color-brand-teal-dark: #003741;
+  --color-brand-teal-deep: #002b33;
+  --color-brand-teal-light: #e7f1f2;
+  --color-brand-teal-muted: #c9dee1;
+
+  --color-brand-gold: #de8a3e;
+  --color-brand-gold-dark: #b86a28;
+  --color-brand-gold-light: #f8ebdd;
+  --color-brand-gold-muted: #eec89e;
+
+  --color-mkt-bg-primary: #fafbfa;
+  --color-mkt-bg-secondary: #f3f6f5;
+  --color-mkt-surface-white: #ffffff;
+  --color-mkt-surface-soft: #f7f9f8;
+
+  --color-mkt-text-primary: #172126;
+  --color-mkt-text-secondary: #4f5d62;
+  --color-mkt-text-muted: #748085;
+  --color-mkt-border-light: #e3e9e7;
+  --color-mkt-border-medium: #cfd9d6;
+
+  --color-mkt-success: #287a5b;
+  --color-mkt-success-bg: #e7f4ed;
+  --color-mkt-warning: #a76322;
+  --color-mkt-warning-bg: #fcf0e4;
+  --color-mkt-danger: #a34040;
+  --color-mkt-danger-bg: #f8eaea;
+
+  --radius-mkt-sm: 8px;
+  --radius-mkt-md: 12px;
+  --radius-mkt-lg: 18px;
+  --radius-mkt-xl: 24px;
+
+  --shadow-mkt-card: 0 1px 2px rgba(0, 35, 42, 0.04), 0 8px 24px rgba(0, 35, 42, 0.05);
+  --shadow-mkt-mockup: 0 2px 4px rgba(0, 35, 42, 0.05), 0 20px 60px rgba(0, 35, 42, 0.1);
+  --shadow-mkt-hover: 0 4px 8px rgba(0, 35, 42, 0.05), 0 24px 48px rgba(0, 35, 42, 0.08);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -19,8 +69,18 @@
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/*
+ * Wrapped in Tailwind's own "base" cascade layer — CSS Cascade Layers give
+ * ANY unlayered rule priority over ANY layered rule regardless of
+ * specificity, so an unlayered `body {}` here would silently beat every
+ * Tailwind utility (color, font-family, background) applied to body or
+ * inherited by its descendants — exactly what broke the marketing site's
+ * custom color/font tokens until this was traced down and fixed.
+ */
+@layer base {
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: Arial, Helvetica, sans-serif;
+  }
 }

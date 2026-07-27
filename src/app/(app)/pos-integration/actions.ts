@@ -26,9 +26,12 @@ export async function savePosCredentials(
 
   const { data: existing } = await supabase
     .from("pos_credentials")
-    .select("pos_type, access_token")
+    .select("pos_type")
     .eq("business_id", id)
     .maybeSingle();
+  // Presence-only check — never decrypts the token itself, per
+  // has_pos_access_token()'s definition in intelliceo_schema.sql.
+  const { data: hasToken } = await supabase.rpc("has_pos_access_token");
 
   // Switching platforms always needs a fresh token — a Square token can't
   // authenticate against Clover's API or vice versa, so the "leave blank to
@@ -40,50 +43,35 @@ export async function savePosCredentials(
     const locationId = input.locationId.trim();
     if (!locationId) return { error: "Enter your Square Location ID." };
 
-    if (!accessToken) {
-      if (switchingPlatform || !existing?.access_token) {
-        return { error: "Enter your Square Access Token." };
-      }
-      const { error } = await supabase
-        .from("pos_credentials")
-        .update({ location_id: locationId, updated_at: new Date().toISOString() })
-        .eq("business_id", id);
-      if (error) return { error: error.message };
-    } else {
-      const { error } = await supabase.from("pos_credentials").upsert({
-        business_id: id,
-        pos_type: "square",
-        access_token: accessToken,
-        location_id: locationId,
-        merchant_id: null,
-        updated_at: new Date().toISOString(),
-      });
-      if (error) return { error: error.message };
+    if (!accessToken && (switchingPlatform || !hasToken)) {
+      return { error: "Enter your Square Access Token." };
     }
+
+    // set_pos_access_token() creates/rotates the Vault secret when a token
+    // is supplied, or keeps the existing one when p_access_token is null —
+    // see intelliceo_schema.sql for the full definition.
+    const { error } = await supabase.rpc("set_pos_access_token", {
+      p_pos_type: "square",
+      p_access_token: accessToken || null,
+      p_location_id: locationId,
+      p_merchant_id: null,
+    });
+    if (error) return { error: error.message };
   } else {
     const merchantId = input.merchantId.trim();
     if (!merchantId) return { error: "Enter your Clover Merchant ID." };
 
-    if (!accessToken) {
-      if (switchingPlatform || !existing?.access_token) {
-        return { error: "Enter your Clover API Token." };
-      }
-      const { error } = await supabase
-        .from("pos_credentials")
-        .update({ merchant_id: merchantId, updated_at: new Date().toISOString() })
-        .eq("business_id", id);
-      if (error) return { error: error.message };
-    } else {
-      const { error } = await supabase.from("pos_credentials").upsert({
-        business_id: id,
-        pos_type: "clover",
-        access_token: accessToken,
-        merchant_id: merchantId,
-        location_id: null,
-        updated_at: new Date().toISOString(),
-      });
-      if (error) return { error: error.message };
+    if (!accessToken && (switchingPlatform || !hasToken)) {
+      return { error: "Enter your Clover API Token." };
     }
+
+    const { error } = await supabase.rpc("set_pos_access_token", {
+      p_pos_type: "clover",
+      p_access_token: accessToken || null,
+      p_location_id: null,
+      p_merchant_id: merchantId,
+    });
+    if (error) return { error: error.message };
   }
 
   revalidatePath("/pos-integration");
@@ -225,21 +213,25 @@ export async function fetchPosMtdRevenue(): Promise<FetchRevenueResult> {
 
   const { data: creds } = await supabase
     .from("pos_credentials")
-    .select("pos_type, access_token, location_id, merchant_id")
+    .select("pos_type, location_id, merchant_id")
     .eq("business_id", id)
     .maybeSingle();
 
-  if (!creds?.access_token) {
+  // Decrypts the caller's own token server-side, in-memory, only for this
+  // immediate API call — see get_pos_access_token() in intelliceo_schema.sql.
+  const { data: accessToken } = await supabase.rpc("get_pos_access_token");
+
+  if (!accessToken) {
     return { error: "Save your POS credentials first." };
   }
 
-  if (creds.pos_type === "clover") {
+  if (creds?.pos_type === "clover") {
     if (!creds.merchant_id) return { error: "Save your Clover Merchant ID first." };
-    return fetchCloverMtdRevenue(creds.access_token, creds.merchant_id);
+    return fetchCloverMtdRevenue(accessToken, creds.merchant_id);
   }
 
-  if (!creds.location_id) return { error: "Save your Square Location ID first." };
-  return fetchSquareMtdRevenue(creds.access_token, creds.location_id);
+  if (!creds?.location_id) return { error: "Save your Square Location ID first." };
+  return fetchSquareMtdRevenue(accessToken, creds.location_id);
 }
 
 export async function useFetchedRevenue(total: number): Promise<{ error?: string }> {
