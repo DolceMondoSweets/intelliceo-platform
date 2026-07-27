@@ -1,6 +1,6 @@
 # IntelliCEO — Progress Status
 
-_Last updated: 2026-07-21. Written to let a fresh session pick up with full context after a context-limit reset. This update was written by directly re-verifying the current state of the repo, live database, and git history — some of the work described below (the sections marked accordingly) happened outside this session's own visible conversation history, so it's documented from ground truth (file contents, git log, live queries) rather than from memory of building it._
+_Last updated: 2026-07-27. Written to let a fresh session pick up with full context after a context-limit reset. This update was written by directly re-verifying the current state of the repo, live database, and git history — some of the work described below (the sections marked accordingly) happened outside this session's own visible conversation history, so it's documented from ground truth (file contents, git log, live queries) rather than from memory of building it._
 
 ## What this is
 
@@ -15,7 +15,7 @@ The legacy Streamlit source (`atlas_dashboard.py` + 13 knowledge-base markdown f
 - Stripe (subscriptions, Checkout, Billing Portal, webhooks) — **still test mode only**, see the "what's left before a pilot" list at the bottom
 - `@anthropic-ai/sdk` for Claude-backed features (model: `claude-sonnet-5`) — the assistant persona is "IntelliCEO" throughout; a prior "Atlas" naming (leftover from the reference app this replaces) has been fully removed, confirmed zero remaining references anywhere in the repo
 - `@sentry/nextjs` for error tracking — confirmed receiving real events
-- A marketing/public site now exists (`src/app/(marketing)/`) alongside the product app — home page, Security page, help center, contact form with email sending (`src/lib/email.ts`, `contact@intelliceo.com`). **Not yet committed to git as of this writing** — see Git status below.
+- A marketing/public site now exists (`src/app/(marketing)/`) alongside the product app — home page, Security page, help center, contact form with email sending (`src/lib/email.ts`, `contact@intelliceo.com`). Committed in `0452060`.
 - Deploy target: Vercel, domain `intelliceo.com` — the user has reported this connection is live; nothing in this repo's config (no `vercel.json`, `next.config.ts` has no domain-specific settings) independently confirms DNS/hosting state one way or the other, since that's configured outside version control. Taken at the user's word.
 
 ## Schema
@@ -30,7 +30,7 @@ The legacy Streamlit source (`atlas_dashboard.py` + 13 knowledge-base markdown f
 
 ## POS credentials: Vault encryption (confirmed live via direct query, 2026-07-21)
 
-`pos_credentials.access_token` used to store each business's live Square/Clover API token in **plain text** — readable by anyone with database/table access (a dashboard user, a leaked service-role key, a misconfigured admin query). `migration_pos_credentials_vault.sql` (repo root, currently untracked — see Git status) is a three-phase migration: (1) additive — enables the `supabase_vault` extension, adds `access_token_secret_id`, backfills existing tokens into `vault.secrets`; (2) a read-only verification `SELECT` to eyeball before proceeding; (3) destructive — drops the plaintext `access_token` column.
+`pos_credentials.access_token` used to store each business's live Square/Clover API token in **plain text** — readable by anyone with database/table access (a dashboard user, a leaked service-role key, a misconfigured admin query). `migration_pos_credentials_vault.sql` (repo root, committed in `0452060`) is a three-phase migration: (1) additive — enables the `supabase_vault` extension, adds `access_token_secret_id`, backfills existing tokens into `vault.secrets`; (2) a read-only verification `SELECT` to eyeball before proceeding; (3) destructive — drops the plaintext `access_token` column.
 
 **Verified live**, independent of this migration file's own header (which says it was never run "from this session" — it was run by the user separately): a direct query against `pos_credentials.access_token` now returns `42703 column does not exist`, while `access_token_secret_id` returns cleanly. **All three phases are confirmed applied.** The only way to read a token now is `get_pos_access_token()`, scoped to the calling business's own row via `auth.uid()` — same pattern as `set_business_name`/`set_business_logo_url`. Anywhere the app used to read `square_credentials.access_token`/`pos_credentials.access_token` directly needs to call this RPC instead — worth grepping for if anything POS-related breaks.
 
@@ -56,9 +56,9 @@ Square is no longer the only POS option. `square_credentials` → `pos_credentia
 - **Runway is now always derived** (`cash / burn`, via `calculateRunwayMonths`/`formatRunwayMonths` in `business-context.ts`/`financial-formulas.ts`), shown as "N/A" when burn is 0 rather than a divide-by-zero artifact. The manual Runway input is gone from both Settings and onboarding, and there's no `finance_data.runway` column anymore.
 - Fixed a real PWA bug: the service worker was caching `/` (a pure auth-redirect route with no static content of its own) as a permanent shell asset, which could freeze a stale login/dashboard routing decision regardless of actual live session state. Cache version bumped to evict it; `/` is no longer cached.
 
-## Marketing site (built, not yet committed — see Git status)
+## Marketing site (built, committed in `0452060`)
 
-A public marketing site now exists alongside the product app under `src/app/(marketing)/` (root `src/app/page.tsx` was deleted in favor of this). Includes a home page, a **Security page** (`src/app/(marketing)/security/page.tsx`) built from nine section components (`src/components/marketing/sections/security/` — Hero, Data Encryption, Auth, Financial Data, Data Ownership, AI Data Usage, Third-Party Services, Data Retention, Responsible Disclosure, Contact), a help center (`public/help-center/`), brand assets (`public/brand/`), and a working contact form (`src/components/marketing/sections/contact/ContactForm.tsx` → `src/lib/email.ts`, sending as `contact@intelliceo.com`). Two brief-writing docs (`IntelliCEO_Website_Brief_Corrected_1.md`, `IntelliCEO_Website_Master_Brief_Original.md`) are sitting at the repo root, also untracked.
+A public marketing site now exists alongside the product app under `src/app/(marketing)/` (root `src/app/page.tsx` was deleted in favor of this). Includes a home page, a **Security page** (`src/app/(marketing)/security/page.tsx`) built from nine section components (`src/components/marketing/sections/security/` — Hero, Data Encryption, Auth, Financial Data, Data Ownership, AI Data Usage, Third-Party Services, Data Retention, Responsible Disclosure, Contact), a help center (`public/help-center/`), brand assets (`public/brand/`), and a working contact form (`src/components/marketing/sections/contact/ContactForm.tsx` → `src/lib/email.ts`, sending via Resend as `contact@intelliceo.com`). Two brief-writing docs (`IntelliCEO_Website_Brief_Corrected_1.md`, `IntelliCEO_Website_Master_Brief_Original.md`) are sitting at the repo root, also now committed.
 
 ## Chat, Ask bar, Dashboard redesign, Stripe billing (built 2026-07-20/21, all pushed)
 
@@ -100,14 +100,9 @@ The original admin RLS policies checked admin status via a subquery directly ins
 
 ## Git status — check this carefully before assuming anything is pushed
 
-As of this writing, `origin/main` and local `main` are identical through commit `a22f49b` ("Add budgeting/goals/what-if tools, in-app billing changes, and Clover POS support"). **Everything below that is uncommitted in the working tree**, including:
-- The entire marketing site: `src/app/(marketing)/`, `src/components/marketing/`, `src/content/`, `public/brand/`, `public/help-center/`, `src/lib/email.ts`
-- `migration_pos_credentials_vault.sql` (already run live, per above, but the file itself isn't committed)
-- Two brief docs at the repo root
-- Modifications to `.env.local.example`, `.gitignore`, `intelliceo_schema.sql`, `package.json`/`package-lock.json`, `content-studio/actions.ts`, `morning-brief/actions.ts` (Atlas naming cleanup lives in these two), `pos-integration/actions.ts`/`page.tsx`, `vital-signs/actions.ts`/`vital-signs-client.tsx`, `login/actions.ts`, `globals.css`, `database.types.ts`
-- Deletion of `src/app/page.tsx`
+As of this writing, `origin/main` and local `main` are identical through commit `0452060` ("Add marketing site, Vault-encrypted POS credentials migration") — working tree is clean, nothing outstanding. That commit landed everything the previous update flagged as uncommitted: the entire marketing site, `migration_pos_credentials_vault.sql`, the two brief docs, and the accumulated modifications to `.env.local.example`/`.gitignore`/`intelliceo_schema.sql`/`package.json`/`package-lock.json`.
 
-Run `git status`/`git diff` at the start of a fresh session to see the exact current state — don't assume the marketing site or the Vault migration file are in git just because they're confirmed live/working.
+Still run `git status`/`git diff` at the start of a fresh session to confirm — this note is a snapshot, not a guarantee.
 
 ## What's left before onboarding a real pilot business
 
@@ -117,6 +112,5 @@ Run `git status`/`git diff` at the start of a fresh session to see the exact cur
 4. **Production environment variables** need to be set on whatever host is used.
 5. **Confirm the contact form's email sending actually works** — `email.ts` exists but hasn't been verified sending a real message in this session.
 6. **Email deliverability for Supabase Auth** (signup confirmation, password reset) — still unconfirmed.
-7. **Commit and push the marketing site + Vault migration file** — see Git status above.
 
 Lower priority: no automated test suite, no rate limiting on Chat's Claude calls, a handful of test businesses/accounts sitting in the database (harmless, RLS-isolated).
