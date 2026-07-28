@@ -2,6 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui";
+import { useElapsedTime } from "@/lib/elapsed-time";
+import { StaleContentNotice } from "@/components/stale-content-notice";
 import { generateMorningBrief, type MorningBrief } from "./actions";
 import { DOMAIN_ORDER } from "./constants";
 
@@ -27,21 +29,29 @@ const PRIORITY_COLORS = ["#c0392b", "#e67e22", "#f1c40f", "#2980b9", "#8e44ad"];
 
 export function MorningBriefClient({
   initialBrief,
+  initialCreatedAt,
   trendHistory,
 }: {
   initialBrief: MorningBrief | null;
+  initialCreatedAt: string | null;
   trendHistory: Array<{ brief_date: string; overall_score: number | null }>;
 }) {
   const [brief, setBrief] = useState<MorningBrief | null>(initialBrief);
+  const [createdAt, setCreatedAt] = useState<string | null>(initialCreatedAt);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const { label: elapsedLabel, isStale } = useElapsedTime(createdAt);
 
   function handleGenerate() {
     setError(null);
     startTransition(async () => {
       const result = await generateMorningBrief();
-      if (result.error) setError(result.error);
-      else setBrief(result.brief ?? null);
+      if (result.error) {
+        setError(result.error);
+      } else {
+        setBrief(result.brief ?? null);
+        setCreatedAt(result.createdAt ?? null);
+      }
     });
   }
 
@@ -61,6 +71,10 @@ export function MorningBriefClient({
 
       {brief && (
         <div className="flex flex-col gap-6">
+          {elapsedLabel && (
+            <p className="-mb-3 text-xs text-zinc-400 dark:text-zinc-600">{elapsedLabel}</p>
+          )}
+          {isStale && <StaleContentNotice onRefresh={handleGenerate} isPending={isPending} />}
           <div className="grid grid-cols-3 gap-3 text-center">
             <div>
               <div className="text-xs text-zinc-500 dark:text-zinc-400">OVERALL SCORE</div>

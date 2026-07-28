@@ -2,6 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui";
+import { useElapsedTime } from "@/lib/elapsed-time";
+import { StaleContentNotice } from "@/components/stale-content-notice";
 import { getVitalSigns, type VitalSignAnswer } from "./actions";
 
 const STATUS_STYLE: Record<string, { color: string; bg: string; icon: string }> = {
@@ -11,11 +13,19 @@ const STATUS_STYLE: Record<string, { color: string; bg: string; icon: string }> 
   unknown: { color: "#9e9e9e", bg: "#f2f2f2", icon: "❓" },
 };
 
-export function VitalSignsClient() {
-  const [answers, setAnswers] = useState<VitalSignAnswer[] | null>(null);
+export function VitalSignsClient({
+  initialAnswers,
+  initialCreatedAt,
+}: {
+  initialAnswers: VitalSignAnswer[] | null;
+  initialCreatedAt: string | null;
+}) {
+  const [answers, setAnswers] = useState<VitalSignAnswer[] | null>(initialAnswers);
+  const [createdAt, setCreatedAt] = useState<string | null>(initialCreatedAt);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
   const [isPending, startTransition] = useTransition();
+  const { label: elapsedLabel, isStale } = useElapsedTime(createdAt);
 
   function handleGenerate() {
     setError(null);
@@ -25,6 +35,7 @@ export function VitalSignsClient() {
         setError(result.error);
       } else {
         setAnswers(result.answers ?? []);
+        setCreatedAt(result.createdAt ?? null);
         setExpanded({});
       }
     });
@@ -40,6 +51,8 @@ export function VitalSignsClient() {
 
       {answers && (
         <div className="flex flex-col gap-2">
+          {elapsedLabel && <p className="text-xs text-zinc-400 dark:text-zinc-600">{elapsedLabel}</p>}
+          {isStale && <StaleContentNotice onRefresh={handleGenerate} isPending={isPending} />}
           {answers.map((a, i) => {
             const style = STATUS_STYLE[a.status] ?? STATUS_STYLE.unknown;
             const isExpanded = !!expanded[i];

@@ -13,7 +13,29 @@ export type VitalSignAnswer = {
   detail: string;
 };
 
-export type VitalSignsResult = { answers?: VitalSignAnswer[]; error?: string };
+export type VitalSignsResult = { answers?: VitalSignAnswer[]; createdAt?: string; error?: string };
+
+export type StoredVitalSigns = { answers: VitalSignAnswer[]; createdAt: string };
+
+// Most recently saved result, if any -- read directly by the page's server
+// component, no client-side round trip needed for the common case of
+// "I already generated this today, just show it to me."
+export async function getLatestVitalSigns(): Promise<StoredVitalSigns | null> {
+  const { businessId } = await getSessionState();
+  if (!businessId) return null;
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("vital_signs_history")
+    .select("full_content, created_at")
+    .eq("business_id", businessId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!data?.full_content || !data.created_at) return null;
+  return { answers: (data.full_content as { answers: VitalSignAnswer[] }).answers, createdAt: data.created_at };
+}
 
 export async function getVitalSigns(): Promise<VitalSignsResult> {
   const client = getAnthropicClient();
@@ -62,5 +84,15 @@ export async function getVitalSigns(): Promise<VitalSignsResult> {
   );
   if (!result) return { error: "IntelliCEO returned a response that couldn't be read. Try again." };
 
-  return { answers: result.answers };
+  // Append-only -- unlike brief_history there's no trend-chart use case here
+  // requiring one row per day, so every generation just gets its own row;
+  // "most recent" is simply the latest by created_at.
+  const now = new Date();
+  await supabase.from("vital_signs_history").insert({
+    business_id: businessId as string,
+    full_content: result,
+    created_at: now.toISOString(),
+  });
+
+  return { answers: result.answers, createdAt: now.toISOString() };
 }

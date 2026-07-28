@@ -21,7 +21,7 @@ export type MorningBrief = {
   top_priorities: string[];
 };
 
-export type GenerateBriefResult = { brief?: MorningBrief; error?: string };
+export type GenerateBriefResult = { brief?: MorningBrief; createdAt?: string; error?: string };
 
 export async function generateMorningBrief(): Promise<GenerateBriefResult> {
   const client = getAnthropicClient();
@@ -83,13 +83,18 @@ export async function generateMorningBrief(): Promise<GenerateBriefResult> {
   const brief = await askClaudeJson<MorningBrief>(client, system, userMessage, 4000);
   if (!brief) return { error: "IntelliCEO returned a response that couldn't be read. Try again." };
 
-  const today = new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const today = now.toISOString().slice(0, 10);
   const { data: financeRow } = await supabase
     .from("finance_data")
     .select("revenue_mtd")
     .eq("business_id", id)
     .maybeSingle();
 
+  // created_at is included explicitly so a same-day regeneration (upsert
+  // conflict on business_id+brief_date) updates the timestamp too --
+  // otherwise it would only ever reflect the first generation of the day,
+  // throwing off the "Generated Xh Ym ago" display after a manual refresh.
   await supabase.from("brief_history").upsert(
     {
       business_id: id,
@@ -98,9 +103,11 @@ export async function generateMorningBrief(): Promise<GenerateBriefResult> {
       momentum: brief.momentum,
       cash_runway_days: brief.cash_runway_days,
       revenue_mtd: financeRow?.revenue_mtd ?? 0,
+      full_content: brief,
+      created_at: now.toISOString(),
     },
     { onConflict: "business_id,brief_date" }
   );
 
-  return { brief };
+  return { brief, createdAt: now.toISOString() };
 }

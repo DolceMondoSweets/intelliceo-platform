@@ -102,8 +102,26 @@ create table brief_history (
     momentum text,
     cash_runway_days integer,
     revenue_mtd numeric,
+    -- Full generated brief (domain_scores, overall_note, biggest_opportunity,
+    -- potential_impact, biggest_risk, recommended_focus, flagged_issues,
+    -- top_priorities) -- the columns above only ever covered the trend-chart
+    -- summary fields; before this, the narrative was generated fresh every
+    -- page load and never actually persisted anywhere.
+    full_content jsonb,
     created_at timestamptz default now(),
     unique(business_id, brief_date)  -- one entry per business per day
+);
+
+-- ── Vital Signs history (full narrative, not just a trend summary) ──────
+-- No trend-chart use case (unlike brief_history) so no per-day uniqueness --
+-- every generation is its own row, "most recent" is just the latest by
+-- created_at.
+
+create table vital_signs_history (
+    id uuid primary key default gen_random_uuid(),
+    business_id uuid references businesses(id) on delete cascade,
+    full_content jsonb not null,
+    created_at timestamptz default now()
 );
 
 -- ── Content Studio drafts ────────────────────────────────────────────────
@@ -202,6 +220,7 @@ alter table finance_data enable row level security;
 alter table goals enable row level security;
 alter table decisions enable row level security;
 alter table brief_history enable row level security;
+alter table vital_signs_history enable row level security;
 alter table marketing_drafts enable row level security;
 alter table knowledge_base_entries enable row level security;
 alter table pos_credentials enable row level security;
@@ -247,6 +266,10 @@ create policy "Tenant isolation: decisions"
 
 create policy "Tenant isolation: brief_history"
     on brief_history for all
+    using (business_id = (select business_id from profiles where id = auth.uid()));
+
+create policy "Tenant isolation: vital_signs_history"
+    on vital_signs_history for all
     using (business_id = (select business_id from profiles where id = auth.uid()));
 
 create policy "Tenant isolation: marketing_drafts"
@@ -570,6 +593,10 @@ create policy "Platform admins see all decisions"
 
 create policy "Platform admins see all brief_history"
     on brief_history for select
+    using (public.is_platform_admin());
+
+create policy "Platform admins see all vital_signs_history"
+    on vital_signs_history for select
     using (public.is_platform_admin());
 
 create policy "Platform admins see all pos_credentials"

@@ -184,6 +184,7 @@ export interface Database {
           momentum: string | null;
           cash_runway_days: number | null;
           revenue_mtd: number | null;
+          full_content: Json | null;
           created_at: string | null;
         };
         Insert: {
@@ -194,12 +195,36 @@ export interface Database {
           momentum?: string | null;
           cash_runway_days?: number | null;
           revenue_mtd?: number | null;
+          full_content?: Json | null;
           created_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["brief_history"]["Insert"]>;
         Relationships: [
           {
             foreignKeyName: "brief_history_business_id_fkey";
+            columns: ["business_id"];
+            referencedRelation: "businesses";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      vital_signs_history: {
+        Row: {
+          id: string;
+          business_id: string | null;
+          full_content: Json;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          business_id?: string | null;
+          full_content: Json;
+          created_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["vital_signs_history"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "vital_signs_history_business_id_fkey";
             columns: ["business_id"];
             referencedRelation: "businesses";
             referencedColumns: ["id"];

@@ -1,6 +1,9 @@
 import { VitalSignsClient } from "./vital-signs-client";
+import { getLatestVitalSigns } from "./actions";
 
-export default function VitalSignsPage() {
+export default async function VitalSignsPage() {
+  const stored = await getLatestVitalSigns();
+
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 bg-zinc-50 px-6 py-10 dark:bg-black">
       <div>
@@ -10,7 +13,10 @@ export default function VitalSignsPage() {
           be able to answer.
         </p>
       </div>
-      <VitalSignsClient />
+      <VitalSignsClient
+        initialAnswers={stored?.answers ?? null}
+        initialCreatedAt={stored?.createdAt ?? null}
+      />
     </div>
   );
 }
