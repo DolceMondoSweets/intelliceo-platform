@@ -17,12 +17,12 @@ export function RecognitionStrip() {
     <section className="border-y border-mkt-border-light bg-mkt-bg-secondary py-10">
       <Container>
         <div className="flex flex-col items-center gap-3">
-          <div className="relative h-14 w-14 overflow-hidden rounded-full border-2 border-mkt-surface-white shadow-mkt-card">
+          <div className="relative h-28 w-28 overflow-hidden rounded-full border-2 border-mkt-surface-white shadow-mkt-card">
             <Image
               src="/images/coffee_owner_smiling.png"
               alt="An independent coffee shop owner"
               fill
-              sizes="56px"
+              sizes="112px"
               className="object-cover"
             />
           </div>
