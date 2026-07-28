@@ -15,3 +15,8 @@ export function getResendClient(): Resend {
 // → Add Domain → add the DNS records it gives you), or sends will fail —
 // Resend does not deliver from unverified sending domains.
 export const CONTACT_FROM_ADDRESS = "IntelliCEO Contact Form <contact@intelliceo.com>";
+
+// In-app Feedback (logged-in businesses only) — same verified sending
+// domain/pipeline as the marketing Contact form, distinct display name so
+// it's identifiable in the help@ inbox at a glance.
+export const FEEDBACK_FROM_ADDRESS = "IntelliCEO Feedback <contact@intelliceo.com>";

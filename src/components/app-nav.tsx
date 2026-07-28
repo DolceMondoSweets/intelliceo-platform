@@ -13,7 +13,6 @@ const LINKS = [
   { href: "/goals", label: "Goals" },
   { href: "/content-studio", label: "Content Studio" },
   { href: "/pos-integration", label: "POS Integration" },
-  { href: "/settings", label: "Settings" },
 ];
 
 function BrandBlock({
@@ -62,7 +61,12 @@ export function AppNav({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
-  const links = isPlatformAdmin ? [...LINKS, { href: "/admin", label: "Admin" }] : LINKS;
+  const links = [
+    ...LINKS,
+    { href: `/feedback?from=${encodeURIComponent(pathname)}`, label: "Feedback" },
+    { href: "/settings", label: "Settings" },
+    ...(isPlatformAdmin ? [{ href: "/admin", label: "Admin" }] : []),
+  ];
 
   return (
     <>
@@ -111,7 +115,7 @@ export function AppNav({
         </div>
         <nav className="flex flex-col gap-1">
           {links.map((link) => {
-            const active = pathname === link.href;
+            const active = pathname === link.href.split("?")[0];
             return (
               <Link
                 key={link.href}
