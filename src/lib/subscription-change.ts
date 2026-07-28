@@ -43,28 +43,40 @@ async function getStripeSubscriptionId(businessId: string): Promise<string | nul
 // Settings — current_period_end lives on the subscription ITEM, not the
 // subscription itself, in this API version (moved there ahead of Stripe's
 // flexible billing-cycle support for multi-item subscriptions).
+//
+// A Stripe lookup failure here (e.g. a stale subscription ID left over
+// from before a test-mode-to-live-mode key switch — test and live objects
+// live in separate namespaces, so an old test-mode id 404s under a live
+// key) must never crash the whole Settings page. This is purely an extra
+// display enrichment on top of our own DB's subscription_status/tier,
+// which the page already renders from independently — so on any failure
+// here, Settings should just fall back to that, not 500.
 export async function getLiveSubscriptionDetails(
   businessId: string
 ): Promise<LiveSubscriptionDetails | null> {
   const subscriptionId = await getStripeSubscriptionId(businessId);
   if (!subscriptionId) return null;
 
-  const stripe = getStripeClient();
-  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-  const item = subscription.items.data[0];
-  const priceId = item?.price.id;
-  const tier =
-    (Object.entries(PRICE_ID_BY_TIER).find(([, id]) => id === priceId)?.[0] as
-      | SubscriptionTier
-      | undefined) ?? null;
+  try {
+    const stripe = getStripeClient();
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    const item = subscription.items.data[0];
+    const priceId = item?.price.id;
+    const tier =
+      (Object.entries(PRICE_ID_BY_TIER).find(([, id]) => id === priceId)?.[0] as
+        | SubscriptionTier
+        | undefined) ?? null;
 
-  return {
-    tier,
-    status: subscription.status,
-    trialEndsAt: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
-    currentPeriodEnd: item ? new Date(item.current_period_end * 1000).toISOString() : null,
-    cancelAtPeriodEnd: subscription.cancel_at_period_end,
-  };
+    return {
+      tier,
+      status: subscription.status,
+      trialEndsAt: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
+      currentPeriodEnd: item ? new Date(item.current_period_end * 1000).toISOString() : null,
+      cancelAtPeriodEnd: subscription.cancel_at_period_end,
+    };
+  } catch {
+    return null;
+  }
 }
 
 // Changes an EXISTING paying subscription's plan directly via Stripe's
