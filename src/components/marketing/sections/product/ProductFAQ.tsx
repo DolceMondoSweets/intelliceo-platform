@@ -14,7 +14,7 @@ export function ProductFAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
-    <section className="bg-mkt-bg-secondary py-[5.5rem] md:py-40">
+    <section id="faq" className="bg-mkt-bg-secondary py-[5.5rem] md:py-40">
       <Container>
         <Reveal>
           <ProseWidth>

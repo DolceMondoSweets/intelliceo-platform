@@ -126,7 +126,7 @@ export function MarketingHeader() {
           >
             Log In
           </Link>
-          <Button href="/beta" className="h-11 px-5 text-sm">
+          <Button href="/signup" className="h-11 px-5 text-sm">
             Join the Beta
           </Button>
         </div>
@@ -204,7 +204,7 @@ export function MarketingHeader() {
                 >
                   Log In
                 </Link>
-                <Button href="/beta" className="w-full">
+                <Button href="/signup" className="w-full">
                   Join the Beta
                 </Button>
               </div>

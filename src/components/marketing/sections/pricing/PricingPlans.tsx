@@ -29,7 +29,7 @@ export function PricingPlans() {
                 </p>
 
                 <div className="mt-6">
-                  <Button href="/beta" className="w-full sm:w-auto">
+                  <Button href={`/signup?plan=${plan.tier}`} className="w-full sm:w-auto">
                     {plan.ctaLabel}
                   </Button>
                 </div>

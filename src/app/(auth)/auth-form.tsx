@@ -11,17 +11,23 @@ export function AuthForm({
   pendingLabel,
   passwordAutoComplete = "current-password",
   footer,
+  hiddenFields,
 }: {
   action: (prevState: AuthState, formData: FormData) => Promise<AuthState>;
   submitLabel: string;
   pendingLabel: string;
   passwordAutoComplete?: "current-password" | "new-password";
   footer: React.ReactNode;
+  hiddenFields?: Record<string, string>;
 }) {
   const [state, formAction, isPending] = useActionState<AuthState, FormData>(action, {});
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
+      {hiddenFields &&
+        Object.entries(hiddenFields).map(([name, value]) => (
+          <input key={name} type="hidden" name={name} value={value} />
+        ))}
       <div className="flex flex-col gap-1.5">
         <label htmlFor="email" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
           Email

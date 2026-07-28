@@ -11,7 +11,7 @@ export function FBAIAdvisor() {
       headline={aiAdvisorSection.headline}
       copy={aiAdvisorSection.copy}
       ctaLabel={aiAdvisorSection.ctaLabel}
-      ctaHref="/beta"
+      ctaHref="/signup"
       mockup={<AdvisorResponse businessName={aiAdvisorSection.businessName} />}
       mockupSide="right"
     />

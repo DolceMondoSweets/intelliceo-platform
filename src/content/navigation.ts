@@ -37,8 +37,10 @@ export const footerColumns = [
   {
     heading: "Resources",
     links: [
-      { label: "Blog", href: "/resources/blog" },
-      { label: "Guides", href: "/resources/guides" },
+      // Blog and Guides removed 2026-07-27 — those content types don't
+      // exist yet (no /resources/blog or /resources/guides route), so
+      // linking to them would just be another dead link. Add back once
+      // that content actually exists.
       { label: "Help Center", href: "/resources" },
       { label: "FAQ", href: "/product#faq" },
     ],
@@ -62,7 +64,7 @@ export const footerColumns = [
     heading: "Account",
     links: [
       { label: "Log In", href: "/login" },
-      { label: "Join the Beta", href: "/beta" },
+      { label: "Join the Beta", href: "/signup" },
     ],
   },
 ] as const;

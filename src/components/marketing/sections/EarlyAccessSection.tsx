@@ -32,7 +32,7 @@ export function EarlyAccessSection() {
         </ul>
 
         <div className="mt-10">
-          <Button href="/beta" variant="gold">
+          <Button href="/signup" variant="gold">
             Join the Beta
           </Button>
         </div>

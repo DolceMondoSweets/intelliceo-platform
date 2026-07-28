@@ -23,7 +23,7 @@ export function ProductPageHero() {
           </ProseWidth>
 
           <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center">
-            <Button href="/beta">Join the Beta</Button>
+            <Button href="/signup">Join the Beta</Button>
             <Button href="/solutions/food-and-beverage" variant="secondary" showArrow>
               See the Food &amp; Beverage Solution
             </Button>

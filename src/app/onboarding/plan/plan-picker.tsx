@@ -32,7 +32,13 @@ const PLANS: {
   },
 ];
 
-export function PlanPicker({ growthAvailable }: { growthAvailable: boolean }) {
+export function PlanPicker({
+  growthAvailable,
+  initialTier,
+}: {
+  growthAvailable: boolean;
+  initialTier?: SubscriptionTier;
+}) {
   const [error, setError] = useState<string | null>(null);
   const [pendingTier, setPendingTier] = useState<SubscriptionTier | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -56,31 +62,43 @@ export function PlanPicker({ growthAvailable }: { growthAvailable: boolean }) {
           coming soon — so only Starter is available for now.
         </p>
       )}
-      {visiblePlans.map((plan) => (
-        <div
-          key={plan.tier}
-          className="flex flex-col gap-3 rounded-2xl border border-zinc-200 p-4 dark:border-zinc-800"
-        >
-          <div>
-            <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
-              {plan.name} — {plan.price}
-            </h2>
-            <ul className="mt-2 flex flex-col gap-1 text-sm text-zinc-600 dark:text-zinc-400">
-              {plan.features.map((feature) => (
-                <li key={feature}>• {feature}</li>
-              ))}
-            </ul>
-          </div>
-          <Button
-            type="button"
-            onClick={() => handleSelect(plan.tier)}
-            disabled={isPending}
-            className="self-start"
+      {visiblePlans.map((plan) => {
+        const isPreselected = plan.tier === initialTier;
+        return (
+          <div
+            key={plan.tier}
+            className={`flex flex-col gap-3 rounded-2xl border p-4 ${
+              isPreselected
+                ? "border-zinc-900 ring-1 ring-zinc-900 dark:border-zinc-50 dark:ring-zinc-50"
+                : "border-zinc-200 dark:border-zinc-800"
+            }`}
           >
-            {isPending && pendingTier === plan.tier ? "Starting…" : "Start free trial"}
-          </Button>
-        </div>
-      ))}
+            <div>
+              {isPreselected && (
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                  Your selected plan
+                </p>
+              )}
+              <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
+                {plan.name} — {plan.price}
+              </h2>
+              <ul className="mt-2 flex flex-col gap-1 text-sm text-zinc-600 dark:text-zinc-400">
+                {plan.features.map((feature) => (
+                  <li key={feature}>• {feature}</li>
+                ))}
+              </ul>
+            </div>
+            <Button
+              type="button"
+              onClick={() => handleSelect(plan.tier)}
+              disabled={isPending}
+              className="self-start"
+            >
+              {isPending && pendingTier === plan.tier ? "Starting…" : "Start free trial"}
+            </Button>
+          </div>
+        );
+      })}
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
     </div>
   );

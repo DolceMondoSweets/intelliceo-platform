@@ -11,7 +11,7 @@ export function FBOperationalVisibility() {
       headline={operationalVisibilitySection.headline}
       copy={operationalVisibilitySection.copy}
       ctaLabel={operationalVisibilitySection.ctaLabel}
-      ctaHref="/beta"
+      ctaHref="/signup"
       mockup={<CEOBriefCard businessName={operationalVisibilitySection.businessName} />}
       mockupSide="left"
       background="secondary"

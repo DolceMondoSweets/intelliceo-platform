@@ -10,8 +10,9 @@
 //
 // Security contact and the "email us to delete/export data" commitment
 // were explicit decisions confirmed with the user, not assumptions:
-// security@intelliceo.com, and manual (not self-service) deletion on
-// request.
+// info@intelliceo.com (only info@/support@/admin@/help@ are real, monitored
+// addresses — security@ was never actually set up), and manual (not
+// self-service) deletion on request.
 
 export const securityHero = {
   eyebrow: "SECURITY",
@@ -82,7 +83,7 @@ export const financialDataSection = {
 
 export const dataOwnershipSection = {
   headline: "Your business data belongs to you.",
-  copy: "IntelliCEO doesn't yet have a self-service export or deletion tool built into the product. If you'd like a copy of your data, or want it deleted entirely, email security@intelliceo.com and we'll take care of it directly.",
+  copy: "IntelliCEO doesn't yet have a self-service export or deletion tool built into the product. If you'd like a copy of your data, or want it deleted entirely, email info@intelliceo.com and we'll take care of it directly.",
 };
 
 export const aiDataUsageSection = {
@@ -104,16 +105,16 @@ export const thirdPartyServicesSection = {
 
 export const dataRetentionSection = {
   headline: "What happens to your data when you cancel.",
-  copy: "Canceling your subscription stops billing, but your account and data stay intact — you can pick up right where you left off if you reactivate. If you'd prefer your data be deleted entirely instead of retained, email security@intelliceo.com and we'll process the request.",
+  copy: "Canceling your subscription stops billing, but your account and data stay intact — you can pick up right where you left off if you reactivate. If you'd prefer your data be deleted entirely instead of retained, email info@intelliceo.com and we'll process the request.",
 };
 
 export const responsibleDisclosureSection = {
   headline: "Found a vulnerability? Tell us.",
-  copy: "If you believe you've found a security vulnerability in IntelliCEO, please report it to security@intelliceo.com. We ask that you give us reasonable time to investigate and address the issue before any public disclosure, and we commit to responding to every report we receive.",
+  copy: "If you believe you've found a security vulnerability in IntelliCEO, please report it to info@intelliceo.com. We ask that you give us reasonable time to investigate and address the issue before any public disclosure, and we commit to responding to every report we receive.",
 };
 
 export const securityContactSection = {
   headline: "Questions about security?",
   copy: "For security questions, vulnerability reports, or data requests, reach us directly.",
-  email: "security@intelliceo.com",
+  email: "info@intelliceo.com",
 };

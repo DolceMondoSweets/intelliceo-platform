@@ -5,10 +5,11 @@ import { financialVisibilitySection } from "@/content/product";
 export function ProductFinancialVisibility() {
   return (
     <ShowcaseSection
+      id="financial-visibility"
       headline={financialVisibilitySection.headline}
       copy={financialVisibilitySection.copy}
       ctaLabel={financialVisibilitySection.ctaLabel}
-      ctaHref="/beta"
+      ctaHref="/signup"
       mockup={<FinancialOverview businessName={financialVisibilitySection.businessName} />}
       mockupSide="left"
       background="secondary"

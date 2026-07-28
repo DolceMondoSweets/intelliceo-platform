@@ -83,7 +83,7 @@ export function Hero() {
               transition={{ duration: 0.6, ease: "easeOut" }}
               className="flex flex-col gap-4 sm:flex-row sm:items-center"
             >
-              <Button href="/beta">Join the Beta</Button>
+              <Button href="/signup">Join the Beta</Button>
               <Button href="/product" variant="secondary" showArrow>
                 See How It Works
               </Button>

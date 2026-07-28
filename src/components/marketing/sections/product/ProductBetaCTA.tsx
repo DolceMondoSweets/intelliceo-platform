@@ -17,7 +17,7 @@ export function ProductBetaCTA() {
             {betaCtaSection.copy}
           </p>
           <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-            <Button href="/beta">{betaCtaSection.primaryCta}</Button>
+            <Button href="/signup">{betaCtaSection.primaryCta}</Button>
             <Button href="/" variant="secondary" showArrow>
               {betaCtaSection.secondaryCta}
             </Button>

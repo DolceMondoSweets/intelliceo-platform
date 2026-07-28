@@ -5,10 +5,11 @@ import { aiAdvisorSection } from "@/content/product";
 export function ProductAIAdvisor() {
   return (
     <ShowcaseSection
+      id="ai-advisor"
       headline={aiAdvisorSection.headline}
       copy={aiAdvisorSection.copy}
       ctaLabel={aiAdvisorSection.ctaLabel}
-      ctaHref="/beta"
+      ctaHref="/signup"
       mockup={<AdvisorResponse businessName={aiAdvisorSection.businessName} />}
       mockupSide="right"
     />

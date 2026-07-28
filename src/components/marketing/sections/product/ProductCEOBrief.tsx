@@ -5,10 +5,11 @@ import { ceoBriefSection } from "@/content/product";
 export function ProductCEOBrief() {
   return (
     <ShowcaseSection
+      id="ceo-brief"
       headline={ceoBriefSection.headline}
       copy={ceoBriefSection.copy}
       ctaLabel={ceoBriefSection.ctaLabel}
-      ctaHref="/beta"
+      ctaHref="/signup"
       mockup={<CEOBriefCard businessName={ceoBriefSection.businessName} />}
       mockupSide="right"
     />

@@ -22,7 +22,7 @@ export function FBPageHero() {
           </ProseWidth>
 
           <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center">
-            <Button href="/beta">Join the Beta</Button>
+            <Button href="/signup">Join the Beta</Button>
             <Button href="/product" variant="secondary" showArrow>
               See How It Works
             </Button>

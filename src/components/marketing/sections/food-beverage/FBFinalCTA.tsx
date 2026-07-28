@@ -17,7 +17,7 @@ export function FBFinalCTA() {
             {finalCtaSection.copy}
           </p>
           <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-            <Button href="/beta">{finalCtaSection.primaryCta}</Button>
+            <Button href="/signup">{finalCtaSection.primaryCta}</Button>
             <Button href="/" variant="secondary" showArrow>
               {finalCtaSection.secondaryCta}
             </Button>

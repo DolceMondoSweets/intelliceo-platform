@@ -41,7 +41,7 @@ export function FBFinancialVisibility() {
               {financialVisibilitySection.copy}
             </p>
             <div className="mt-8">
-              <Button href="/beta" variant="secondary" showArrow>
+              <Button href="/signup" variant="secondary" showArrow>
                 {financialVisibilitySection.ctaLabel}
               </Button>
             </div>

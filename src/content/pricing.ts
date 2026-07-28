@@ -35,6 +35,7 @@ export const trialNote = "7-day free trial on either plan — your card won't be
 
 export const plans = [
   {
+    tier: "starter" as const,
     name: "Starter",
     price: "$59",
     cadence: "/mo",
@@ -56,6 +57,7 @@ export const plans = [
     ctaLabel: "Start with Starter",
   },
   {
+    tier: "growth" as const,
     name: "Growth",
     price: "$89",
     cadence: "/mo",

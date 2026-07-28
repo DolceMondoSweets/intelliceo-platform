@@ -10,7 +10,7 @@ import { contentStudioSection } from "@/content/product";
 // Announcement) across three different example businesses.
 export function ProductContentStudio() {
   return (
-    <section className="py-[5.5rem] md:py-40">
+    <section id="content-studio" className="py-[5.5rem] md:py-40">
       <Container>
         <Reveal>
           <ProseWidth large>
@@ -21,7 +21,7 @@ export function ProductContentStudio() {
               {contentStudioSection.copy}
             </p>
             <div className="mt-8">
-              <Button href="/beta" variant="secondary" showArrow>
+              <Button href="/signup" variant="secondary" showArrow>
                 {contentStudioSection.ctaLabel}
               </Button>
             </div>

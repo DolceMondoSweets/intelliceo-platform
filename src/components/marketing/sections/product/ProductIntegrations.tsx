@@ -11,7 +11,7 @@ import { integrationsSection } from "@/content/product";
 // real screenshots.
 export function ProductIntegrations() {
   return (
-    <section className="bg-mkt-bg-secondary py-[5.5rem] md:py-40">
+    <section id="integrations" className="bg-mkt-bg-secondary py-[5.5rem] md:py-40">
       <Container>
         <Reveal>
           <ProseWidth large>
