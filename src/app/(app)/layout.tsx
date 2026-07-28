@@ -7,7 +7,7 @@ import { AppNav } from "@/components/app-nav";
 import { AskBar } from "@/components/ask-bar";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user, businessId, subscriptionStatus } = await getSessionState();
+  const { user, businessId, subscriptionStatus, isPlatformAdmin } = await getSessionState();
   if (!user) redirect("/login");
   if (!businessId) redirect("/onboarding");
 
@@ -20,7 +20,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex flex-1 flex-col md:flex-row">
-      <AppNav businessName={brand.name} logoUrl={brand.logoUrl} />
+      <AppNav businessName={brand.name} logoUrl={brand.logoUrl} isPlatformAdmin={isPlatformAdmin} />
       <main className="flex flex-1 flex-col md:ml-64">
         <AskBar />
         {children}

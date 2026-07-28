@@ -54,12 +54,15 @@ function BrandBlock({
 export function AppNav({
   businessName = "",
   logoUrl = null,
+  isPlatformAdmin = false,
 }: {
   businessName?: string;
   logoUrl?: string | null;
+  isPlatformAdmin?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
+  const links = isPlatformAdmin ? [...LINKS, { href: "/admin", label: "Admin" }] : LINKS;
 
   return (
     <>
@@ -107,7 +110,7 @@ export function AppNav({
           </button>
         </div>
         <nav className="flex flex-col gap-1">
-          {LINKS.map((link) => {
+          {links.map((link) => {
             const active = pathname === link.href;
             return (
               <Link
