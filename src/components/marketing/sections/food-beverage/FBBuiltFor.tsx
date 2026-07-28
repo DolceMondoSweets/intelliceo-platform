@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Coffee, Croissant, Store, Truck, Utensils } from "lucide-react";
 import { Container, ProseWidth } from "@/components/marketing/ui/Container";
 import { Reveal } from "@/components/marketing/ui/Reveal";
@@ -13,13 +14,25 @@ export function FBBuiltFor() {
   return (
     <section className="bg-mkt-bg-secondary py-[5.5rem] md:py-40">
       <Container>
-        <Reveal>
-          <ProseWidth>
-            <h2 className={`${sectionHeadline} text-mkt-text-primary`}>
-              Who IntelliCEO is built for.
-            </h2>
-          </ProseWidth>
-        </Reveal>
+        <div className="grid items-center gap-10 lg:grid-cols-[7fr_5fr] lg:gap-16">
+          <Reveal>
+            <ProseWidth>
+              <h2 className={`${sectionHeadline} text-mkt-text-primary`}>
+                Who IntelliCEO is built for.
+              </h2>
+            </ProseWidth>
+          </Reveal>
+
+          <Reveal delay={0.1} className="relative aspect-[4/5] w-full max-w-[380px] justify-self-center overflow-hidden rounded-mkt-xl shadow-mkt-card lg:justify-self-end">
+            <Image
+              src="/images/owner_on_cellphone.png"
+              alt="A business owner checking her phone while packing an order"
+              fill
+              sizes="(min-width: 1024px) 380px, 80vw"
+              className="object-cover"
+            />
+          </Reveal>
+        </div>
 
         <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
           {builtForTypes.map((type) => {

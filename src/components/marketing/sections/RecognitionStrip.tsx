@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Coffee, Croissant, Store, Truck, Utensils } from "lucide-react";
 import { Container } from "@/components/marketing/ui/Container";
 
@@ -15,9 +16,20 @@ export function RecognitionStrip() {
   return (
     <section className="border-y border-mkt-border-light bg-mkt-bg-secondary py-10">
       <Container>
-        <p className="text-center text-sm font-medium text-mkt-text-muted">
-          Built for the owner making a hundred decisions a day.
-        </p>
+        <div className="flex flex-col items-center gap-3">
+          <div className="relative h-14 w-14 overflow-hidden rounded-full border-2 border-mkt-surface-white shadow-mkt-card">
+            <Image
+              src="/images/coffee_owner_smiling.png"
+              alt="An independent coffee shop owner"
+              fill
+              sizes="56px"
+              className="object-cover"
+            />
+          </div>
+          <p className="text-center text-sm font-medium text-mkt-text-muted">
+            Built for the owner making a hundred decisions a day.
+          </p>
+        </div>
         <div className="mt-6 flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
           {businessTypes.map(({ label, icon: Icon }) => (
             <div key={label} className="flex items-center gap-2 text-mkt-text-secondary">
