@@ -48,7 +48,7 @@ export function MorningBriefClient({
   return (
     <div className="flex flex-col gap-6">
       <Button type="button" onClick={handleGenerate} disabled={isPending} className="self-start">
-        {isPending ? "Asking Claude…" : "Generate Fresh CEO Brief"}
+        {isPending ? "Generating…" : "Generate Fresh CEO Brief"}
       </Button>
 
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}

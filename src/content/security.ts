@@ -88,7 +88,7 @@ export const dataOwnershipSection = {
 
 export const aiDataUsageSection = {
   headline: "What IntelliCEO sends to its AI provider, and what it doesn't.",
-  copy: "The CEO Brief, Chat, and Content Studio are powered by Anthropic's Claude. To ground its answers in your real business, IntelliCEO sends the information you've entered — your business overview and priorities, your finance snapshot, and recent conversation history. IntelliCEO never sends your payment details, login credentials, or point-of-sale access tokens to Anthropic or anyone else. Anthropic's own API terms state that data submitted through the API is not used to train their models.",
+  copy: "The CEO Brief, Chat, and Content Studio are powered by Anthropic. To ground its answers in your real business, IntelliCEO sends the information you've entered — your business overview and priorities, your finance snapshot, and recent conversation history. IntelliCEO never sends your payment details, login credentials, or point-of-sale access tokens to Anthropic or anyone else. Anthropic's own API terms state that data submitted through the API is not used to train their models.",
 };
 
 export const thirdPartyServicesSection = {

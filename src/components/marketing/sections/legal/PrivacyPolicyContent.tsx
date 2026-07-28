@@ -135,7 +135,7 @@ export function PrivacyPolicyContent() {
 
       <LegalSection heading="4. AI and Your Data">
         <p>
-          IntelliCEO uses Anthropic&rsquo;s Claude AI models to generate the CEO Brief, Vital
+          IntelliCEO uses Anthropic&rsquo;s AI models to generate the CEO Brief, Vital
           Signs, Chat responses, and Content Studio drafts. Your business data is sent to
           Anthropic&rsquo;s API to generate these features.
         </p>
